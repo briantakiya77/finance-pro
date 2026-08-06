@@ -62,6 +62,20 @@ src/
 - Integracoes de SDK, cliente HTTP, Supabase e provedores externos ficam em `src/integrations/`.
 - Nenhuma integracao externa deve depender de UI.
 
+## Variaveis e ambientes
+
+- Variaveis publicas de frontend devem passar por `src/shared/lib/env.ts`.
+- O cliente web deve usar apenas `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
+- Segredos administrativos ficam proibidos no navegador e reservados para camadas server-side futuras.
+
+## Autenticacao e autorizacao
+
+- A autenticacao fica concentrada em `src/modules/auth/`.
+- `AuthProvider` sincroniza a sessao do Supabase com a aplicacao.
+- `useAuth` expoe o estado autenticado e as operacoes permitidas no cliente.
+- Guardas de rota controlam acesso visual, mas nao substituem autorizacao de dados.
+- RLS continua obrigatoria para proteger dados no Supabase.
+
 ## Regra obrigatoria
 
 Logica financeira fica proibida dentro de componentes React. Componentes devem renderizar interface e delegar regras de negocio para camadas de dominio apropriadas.

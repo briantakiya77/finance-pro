@@ -1,67 +1,183 @@
-import { ArrowUpRight, Layers, ShieldCheck, Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowUpRight, Landmark, TrendingDown, TrendingUp, WalletCards } from 'lucide-react';
 
-const foundationItems = [
+import { Badge, Card } from '@/shared/components/ui';
+
+const chartBars = [32, 46, 38, 58, 49, 72, 61, 80, 68, 86, 74, 92];
+
+const summaryCards = [
   {
-    title: 'Arquitetura escalavel',
-    description: 'Pastas separadas por responsabilidade para crescimento incremental.',
-    icon: Layers
+    label: 'Receitas',
+    value: 'R$ 0,00',
+    detail: 'Nenhum lancamento',
+    icon: TrendingUp,
+    tone: 'income'
   },
   {
-    title: 'Base segura',
-    description: 'Ambiente preparado para Supabase sem segredos expostos no codigo.',
-    icon: ShieldCheck
+    label: 'Despesas',
+    value: 'R$ 0,00',
+    detail: 'Nenhum lancamento',
+    icon: TrendingDown,
+    tone: 'expense'
   },
   {
-    title: 'Performance desde o inicio',
-    description: 'React Query pronto para cache, reuso de estado e leituras eficientes.',
-    icon: Zap
+    label: 'Contas',
+    value: 'Comece por aqui',
+    detail: 'Organize suas contas',
+    icon: Landmark,
+    tone: 'accent'
   }
-];
+] as const;
 
 export default function DashboardPage() {
   return (
-    <section className="mx-auto flex max-w-6xl flex-col gap-8">
-      <div className="flex min-h-[58vh] flex-col justify-center gap-8">
-        <div className="max-w-3xl">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent">
-            <span className="h-2 w-2 rounded-full bg-success" />
-            Fundacao inicial
-          </div>
-          <h1 className="text-4xl font-semibold tracking-normal text-text-primary sm:text-5xl lg:text-6xl">
-            Finance Pro
-          </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-text-secondary sm:text-lg">
-            Interface limpa, responsiva e preparada para receber os proximos modulos do aplicativo
-            financeiro com consistencia, seguranca e performance.
+    <motion.section
+      className="mx-auto flex max-w-7xl flex-col gap-6 lg:gap-8"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <Badge variant="accent">
+            <span className="h-1.5 w-1.5 rounded-full bg-success" />
+            Visao geral
+          </Badge>
+          <h1 className="mt-4 text-title font-semibold text-text-primary">Finance Pro</h1>
+          <p className="mt-2 text-body text-text-secondary">
+            Seu panorama financeiro em um unico lugar.
           </p>
         </div>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          {foundationItems.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <article
-                key={item.title}
-                className="rounded-lg border border-border bg-surface/75 p-5 shadow-glow"
-              >
-                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-accent/15 text-accent">
-                  <Icon size={22} />
-                </div>
-                <h2 className="text-base font-semibold text-text-primary">{item.title}</h2>
-                <p className="mt-2 text-sm leading-6 text-text-secondary">{item.description}</p>
-              </article>
-            );
-          })}
-        </div>
-
-        <div className="flex flex-col gap-3 border-t border-border pt-6 text-sm text-text-secondary sm:flex-row sm:items-center sm:justify-between">
-          <span>Pronto para evoluir sem implementar regras financeiras nesta etapa.</span>
-          <span className="inline-flex items-center gap-2 text-accent">
-            Estrutura profissional <ArrowUpRight size={16} />
-          </span>
-        </div>
+        <p className="text-caption text-text-secondary">Atualizado agora</p>
       </div>
-    </section>
+
+      <div className="grid gap-4 xl:grid-cols-[1.45fr_1fr]">
+        <Card className="relative overflow-hidden p-5 sm:p-6" interactive>
+          <div className="absolute inset-x-0 top-0 h-px bg-accent-gradient" />
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm text-text-secondary">Saldo disponivel</p>
+              <p className="mt-2 text-display font-semibold text-text-primary">R$ 0,00</p>
+            </div>
+            <span className="flex h-11 w-11 items-center justify-center rounded-control bg-accent-gradient-soft text-accent">
+              <WalletCards size={22} />
+            </span>
+          </div>
+
+          <div className="mt-8 flex items-center justify-between border-t border-border pt-4">
+            <div>
+              <p className="text-sm font-medium text-text-primary">Suas contas</p>
+              <p className="mt-1 text-caption text-text-secondary">Prontas para organizar</p>
+            </div>
+            <span className="inline-flex items-center gap-1.5 text-sm text-accent">
+              Ver contas <ArrowUpRight size={16} />
+            </span>
+          </div>
+        </Card>
+
+        <Card className="p-5 sm:p-6" tone="secondary">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-text-primary">Planejamento mensal</p>
+              <p className="mt-1 text-caption text-text-secondary">Aguardando movimentacoes</p>
+            </div>
+            <Badge>0% utilizado</Badge>
+          </div>
+          <div className="mt-8 h-2 overflow-hidden rounded-full bg-background">
+            <div className="h-full w-0 rounded-full bg-income" />
+          </div>
+          <div className="mt-3 flex justify-between text-caption text-text-secondary">
+            <span>R$ 0,00</span>
+            <span>Sem orcamento definido</span>
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        {summaryCards.map((item, index) => {
+          const Icon = item.icon;
+
+          return (
+            <motion.div
+              key={item.label}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.06 * index, duration: 0.32 }}
+            >
+              <Card className="h-full p-5" interactive>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-text-secondary">{item.label}</p>
+                    <p
+                      className={
+                        item.tone === 'income'
+                          ? 'mt-2 text-heading font-semibold text-income'
+                          : item.tone === 'expense'
+                            ? 'mt-2 text-heading font-semibold text-expense'
+                            : 'mt-2 text-heading font-semibold text-text-primary'
+                      }
+                    >
+                      {item.value}
+                    </p>
+                    <p className="mt-1.5 text-caption text-text-secondary">{item.detail}</p>
+                  </div>
+                  <span
+                    className={
+                      item.tone === 'income'
+                        ? 'text-income'
+                        : item.tone === 'expense'
+                          ? 'text-expense'
+                          : 'text-accent'
+                    }
+                  >
+                    <Icon size={20} />
+                  </span>
+                </div>
+              </Card>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+        <Card className="p-5 sm:p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-heading font-semibold text-text-primary">Fluxo mensal</h2>
+              <p className="mt-1 text-caption text-text-secondary">Visualizacao preparada</p>
+            </div>
+            <Badge variant="accent">12 meses</Badge>
+          </div>
+          <div
+            className="mt-8 flex h-44 items-end gap-2 border-b border-border px-1 pb-1 sm:gap-3"
+            role="img"
+            aria-label="Grafico demonstrativo do fluxo mensal"
+          >
+            {chartBars.map((height, index) => (
+              <motion.span
+                key={`${height}-${index}`}
+                className="min-w-0 flex-1 rounded-t-sm bg-accent-gradient opacity-75"
+                initial={{ height: 0 }}
+                animate={{ height: `${height}%` }}
+                transition={{ delay: 0.02 * index, duration: 0.5 }}
+              />
+            ))}
+          </div>
+        </Card>
+
+        <Card className="p-5 sm:p-6" tone="secondary">
+          <h2 className="text-heading font-semibold text-text-primary">Distribuicao</h2>
+          <p className="mt-1 text-caption text-text-secondary">Sem dados financeiros ainda</p>
+          <div className="mt-8 flex items-center justify-center">
+            <div className="relative flex aspect-square w-40 items-center justify-center rounded-full bg-[conic-gradient(rgb(var(--accent))_0deg,rgb(var(--accent-secondary))_120deg,rgb(var(--surface-hover))_120deg)]">
+              <div className="flex h-24 w-24 flex-col items-center justify-center rounded-full bg-surface-secondary">
+                <span className="text-heading font-semibold text-text-primary">0%</span>
+                <span className="mt-1 text-caption text-text-secondary">categorizado</span>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </motion.section>
   );
 }

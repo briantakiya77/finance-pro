@@ -3,14 +3,53 @@ import { createBrowserRouter } from 'react-router';
 
 import { AppLayout } from '@/app/layouts/AppLayout';
 import { NotFoundPage } from '@/app/router/NotFoundPage';
+import { ForgotPasswordRoute } from '@/modules/auth/routes/ForgotPasswordRoute';
+import { LoginRoute } from '@/modules/auth/routes/LoginRoute';
+import { NewPasswordRoute } from '@/modules/auth/routes/NewPasswordRoute';
+import { ProtectedRoute } from '@/modules/auth/routes/ProtectedRoute';
+import { PublicOnlyRoute } from '@/modules/auth/routes/PublicOnlyRoute';
+import { SignUpRoute } from '@/modules/auth/routes/SignUpRoute';
 import { RouteLoading } from '@/shared/components/ui/RouteLoading';
 
+const AccountsPage = lazy(() => import('@/modules/accounts/pages/AccountsPage'));
 const DashboardPage = lazy(() => import('@/modules/dashboard/pages/DashboardPage'));
 
 export const router = createBrowserRouter([
   {
+    path: '/login',
+    element: (
+      <PublicOnlyRoute>
+        <LoginRoute />
+      </PublicOnlyRoute>
+    )
+  },
+  {
+    path: '/cadastro',
+    element: (
+      <PublicOnlyRoute>
+        <SignUpRoute />
+      </PublicOnlyRoute>
+    )
+  },
+  {
+    path: '/esqueci-senha',
+    element: (
+      <PublicOnlyRoute>
+        <ForgotPasswordRoute />
+      </PublicOnlyRoute>
+    )
+  },
+  {
+    path: '/nova-senha',
+    element: <NewPasswordRoute />
+  },
+  {
     path: '/',
-    element: <AppLayout />,
+    element: (
+      <ProtectedRoute>
+        <AppLayout />
+      </ProtectedRoute>
+    ),
     errorElement: <NotFoundPage />,
     children: [
       {
@@ -18,6 +57,14 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<RouteLoading />}>
             <DashboardPage />
+          </Suspense>
+        )
+      },
+      {
+        path: 'contas',
+        element: (
+          <Suspense fallback={<RouteLoading />}>
+            <AccountsPage />
           </Suspense>
         )
       }

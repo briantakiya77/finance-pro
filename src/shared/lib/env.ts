@@ -1,33 +1,43 @@
 import { z } from 'zod';
 
-const sharedEnvShape = {
+const frontendEnvSchema = z.object({
   VITE_SUPABASE_URL: z.string().trim().optional(),
   VITE_SUPABASE_ANON_KEY: z.string().trim().optional()
-};
+});
 
 const productionEnvSchema = z.object({
   VITE_SUPABASE_URL: z.string().url('VITE_SUPABASE_URL deve ser uma URL valida em producao.'),
   VITE_SUPABASE_ANON_KEY: z.string().min(1, 'VITE_SUPABASE_ANON_KEY e obrigatoria em producao.')
 });
 
-const nonProductionEnvSchema = z.object(sharedEnvShape);
+type FrontendEnv = z.infer<typeof frontendEnvSchema>;
+type AppEnv = z.infer<typeof productionEnvSchema> | FrontendEnv;
 
-type AppEnv = z.infer<typeof productionEnvSchema> | z.infer<typeof nonProductionEnvSchema>;
+const requiredSupabaseVariables = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'] as const;
 
-function warnMissingDevVariables(env: z.infer<typeof nonProductionEnvSchema>) {
+function getMissingSupabaseVariables(env: FrontendEnv) {
+  return requiredSupabaseVariables.filter((key) => !env[key]);
+}
+
+function warnMissingDevVariables(env: FrontendEnv) {
   if (import.meta.env.MODE !== 'development') {
     return;
   }
 
-  const missingVariables = Object.entries(env)
-    .filter(([, value]) => !value)
-    .map(([key]) => key);
+  const missingVariables = getMissingSupabaseVariables(env);
 
   if (missingVariables.length > 0) {
     console.warn(
-      `[env] Variaveis opcionais ainda nao configuradas no desenvolvimento: ${missingVariables.join(', ')}.`
+      `[env] Supabase ainda nao configurado no ambiente local. Defina ${missingVariables.join(', ')} no arquivo .env.local. Apenas VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY devem ser usadas no frontend.`
     );
   }
+}
+
+function normalizeFrontendEnv(env: FrontendEnv): FrontendEnv {
+  return {
+    VITE_SUPABASE_URL: env.VITE_SUPABASE_URL || undefined,
+    VITE_SUPABASE_ANON_KEY: env.VITE_SUPABASE_ANON_KEY || undefined
+  };
 }
 
 function parseEnvironment(): AppEnv {
@@ -40,10 +50,11 @@ function parseEnvironment(): AppEnv {
     return productionEnvSchema.parse(rawEnv);
   }
 
-  const parsedEnv = nonProductionEnvSchema.parse(rawEnv);
+  const parsedEnv = normalizeFrontendEnv(frontendEnvSchema.parse(rawEnv));
   warnMissingDevVariables(parsedEnv);
 
   return parsedEnv;
 }
 
 export const env = parseEnvironment();
+export const hasSupabaseEnv = getMissingSupabaseVariables(env).length === 0;
