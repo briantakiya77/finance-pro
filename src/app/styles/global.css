@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 8 13 24;
+  --surface: 15 23 42;
+  --surface-hover: 23 32 54;
+  --border: 36 48 71;
+  --text-primary: 229 237 248;
+  --text-secondary: 148 163 184;
+  --accent: 34 211 238;
+  --success: 52 211 153;
+  --warning: 245 158 11;
+  --danger: 248 113 113;
+  --income: 16 185 129;
+  --expense: 239 68 68;
+  color-scheme: dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: rgb(var(--background));
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  background:
+    radial-gradient(circle at top left, rgb(var(--accent) / 0.18), transparent 30rem),
+    linear-gradient(145deg, rgb(var(--background)) 0%, rgb(12 19 36) 50%, rgb(11 16 32) 100%);
+  color: rgb(var(--text-primary));
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+#root {
+  min-height: 100vh;
+}
