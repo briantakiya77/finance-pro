@@ -13,6 +13,7 @@ import { RouteLoading } from '@/shared/components/ui/RouteLoading';
 
 const AccountsPage = lazy(() => import('@/modules/accounts/pages/AccountsPage'));
 const DashboardPage = lazy(() => import('@/modules/dashboard/pages/DashboardPage'));
+const TransactionsPage = lazy(() => import('@/modules/transactions/pages/TransactionsPage'));
 
 export const router = createBrowserRouter([
   {
@@ -65,6 +66,14 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<RouteLoading />}>
             <AccountsPage />
+          </Suspense>
+        )
+      },
+      {
+        path: 'lancamentos',
+        element: (
+          <Suspense fallback={<RouteLoading />}>
+            <TransactionsPage />
           </Suspense>
         )
       }

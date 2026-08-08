@@ -1,35 +1,39 @@
 import { motion } from 'framer-motion';
 import { ArrowUpRight, Landmark, TrendingDown, TrendingUp, WalletCards } from 'lucide-react';
 
+import { useDashboardSummaryQuery } from '@/modules/dashboard/queries/dashboardQueries';
 import { Badge, Card } from '@/shared/components/ui';
+import { formatCurrency } from '@/shared/utils/money';
 
 const chartBars = [32, 46, 38, 58, 49, 72, 61, 80, 68, 86, 74, 92];
 
-const summaryCards = [
-  {
-    label: 'Receitas',
-    value: 'R$ 0,00',
-    detail: 'Nenhum lancamento',
-    icon: TrendingUp,
-    tone: 'income'
-  },
-  {
-    label: 'Despesas',
-    value: 'R$ 0,00',
-    detail: 'Nenhum lancamento',
-    icon: TrendingDown,
-    tone: 'expense'
-  },
-  {
-    label: 'Contas',
-    value: 'Comece por aqui',
-    detail: 'Organize suas contas',
-    icon: Landmark,
-    tone: 'accent'
-  }
-] as const;
-
 export default function DashboardPage() {
+  const summaryQuery = useDashboardSummaryQuery();
+  const summary = summaryQuery.data;
+  const summaryCards = [
+    {
+      label: 'Receitas',
+      value: formatCurrency(summary?.currentMonthIncome ?? '0.00'),
+      detail: 'Este mes',
+      icon: TrendingUp,
+      tone: 'income'
+    },
+    {
+      label: 'Despesas',
+      value: formatCurrency(summary?.currentMonthExpense ?? '0.00'),
+      detail: 'Este mes',
+      icon: TrendingDown,
+      tone: 'expense'
+    },
+    {
+      label: 'Contas',
+      value: String(summary?.accountsCount ?? 0),
+      detail: 'Contas ativas',
+      icon: Landmark,
+      tone: 'accent'
+    }
+  ] as const;
+
   return (
     <motion.section
       className="mx-auto flex max-w-7xl flex-col gap-6 lg:gap-8"
@@ -57,7 +61,9 @@ export default function DashboardPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm text-text-secondary">Saldo disponivel</p>
-              <p className="mt-2 text-display font-semibold text-text-primary">R$ 0,00</p>
+              <p className="mt-2 text-display font-semibold text-text-primary">
+                {formatCurrency(summary?.availableBalance ?? '0.00')}
+              </p>
             </div>
             <span className="flex h-11 w-11 items-center justify-center rounded-control bg-accent-gradient-soft text-accent">
               <WalletCards size={22} />
@@ -67,7 +73,11 @@ export default function DashboardPage() {
           <div className="mt-8 flex items-center justify-between border-t border-border pt-4">
             <div>
               <p className="text-sm font-medium text-text-primary">Suas contas</p>
-              <p className="mt-1 text-caption text-text-secondary">Prontas para organizar</p>
+              <p className="mt-1 text-caption text-text-secondary">
+                {summaryQuery.isLoading
+                  ? 'Atualizando saldos'
+                  : `${summary?.accountsCount ?? 0} contas ativas`}
+              </p>
             </div>
             <span className="inline-flex items-center gap-1.5 text-sm text-accent">
               Ver contas <ArrowUpRight size={16} />

@@ -1,4 +1,4 @@
-import { ChevronLeft, Landmark, LayoutDashboard } from 'lucide-react';
+import { ChevronLeft, Landmark, LayoutDashboard, ReceiptText } from 'lucide-react';
 import { NavLink } from 'react-router';
 
 import { BrandMark } from '@/shared/components/brand/BrandMark';
@@ -12,7 +12,8 @@ type SidebarProps = {
 
 const navigationItems = [
   { label: 'Inicio', href: '/', icon: LayoutDashboard },
-  { label: 'Contas', href: '/contas', icon: Landmark }
+  { label: 'Contas', href: '/contas', icon: Landmark },
+  { label: 'Lancamentos', href: '/lancamentos', icon: ReceiptText }
 ];
 
 export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {

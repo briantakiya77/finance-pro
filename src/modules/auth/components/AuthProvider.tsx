@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AuthContext } from '@/modules/auth/components/AuthContext';
 import { authService } from '@/modules/auth/services/authService';
 import type { AuthSession, AuthState } from '@/modules/auth/types/auth';
+import { categoriesService } from '@/modules/categories/services/categoriesService';
 
 const initialAuthState: AuthState = {
   user: null,
@@ -46,6 +47,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
 
       setAuthState(buildAuthState(session, false));
+
+      if (session?.user) {
+        void categoriesService.ensureDefaultCategories();
+      }
     });
 
     loadSession();
@@ -55,6 +60,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (authState.isAuthenticated) {
+      void categoriesService.ensureDefaultCategories();
+    }
+  }, [authState.isAuthenticated]);
 
   return (
     <AuthContext.Provider

@@ -129,9 +129,45 @@ export function getSupabaseAuthMock() {
   return authMock;
 }
 
+function createQueryMock(tableName: string) {
+  const query = {
+    eq: vi.fn(() => query),
+    gte: vi.fn(() => query),
+    insert: vi.fn(() => query),
+    is: vi.fn(() => query),
+    lt: vi.fn(() => query),
+    order: vi.fn(() => query),
+    range: vi.fn(async () => ({
+      data: [],
+      error: null
+    })),
+    select: vi.fn(() => query),
+    single: vi.fn(async () => ({
+      data: null,
+      error: null
+    })),
+    update: vi.fn(() => query),
+    then: (resolve: (value: unknown) => void) => {
+      const response =
+        tableName === 'accounts'
+          ? { count: 0, data: [], error: null }
+          : { data: [], error: null };
+
+      return Promise.resolve(response).then(resolve);
+    }
+  };
+
+  return query;
+}
+
 export function createSupabaseIntegrationMock() {
   const client = {
     auth: authMock,
+    from: vi.fn((tableName: string) => createQueryMock(tableName)),
+    rpc: vi.fn(async () => ({
+      data: null,
+      error: null
+    })),
     storage: {},
     functions: {}
   };
