@@ -125,6 +125,10 @@ const authMock = {
   updateUser: vi.fn(async () => ({ data: { user: null }, error: null }))
 };
 
+export function getSupabaseAuthMock() {
+  return authMock;
+}
+
 export function createSupabaseIntegrationMock() {
   const client = {
     auth: authMock,
