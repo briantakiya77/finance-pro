@@ -31,6 +31,22 @@ function normalizeMoneyValue(value: string) {
 }
 
 function mapFormValuesToInsert(values: AccountFormValues): AccountInsert {
+  const normalizedInitialBalance = normalizeMoneyValue(values.initialBalance);
+
+  return {
+    name: values.name.trim(),
+    bank: values.bank.trim(),
+    type: values.type,
+    color: values.color,
+    icon: values.icon,
+    initial_balance: normalizedInitialBalance,
+    current_balance: normalizedInitialBalance,
+    is_active: values.isActive,
+    is_primary: values.isPrimary
+  };
+}
+
+function mapFormValuesToUpdate(values: AccountFormValues): AccountUpdate {
   return {
     name: values.name.trim(),
     bank: values.bank.trim(),
@@ -38,14 +54,9 @@ function mapFormValuesToInsert(values: AccountFormValues): AccountInsert {
     color: values.color,
     icon: values.icon,
     initial_balance: normalizeMoneyValue(values.initialBalance),
-    current_balance: normalizeMoneyValue(values.currentBalance),
     is_active: values.isActive,
     is_primary: values.isPrimary
   };
-}
-
-function mapFormValuesToUpdate(values: AccountFormValues): AccountUpdate {
-  return mapFormValuesToInsert(values);
 }
 
 function createAccountErrorResult<T>(error: unknown): AccountMutationResult<T> {

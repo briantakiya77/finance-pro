@@ -66,6 +66,13 @@ export function AccountFormModal({
 
   const selectedColor = watch('color');
   const selectedIcon = watch('icon');
+  const initialBalance = watch('initialBalance');
+
+  useEffect(() => {
+    if (!account) {
+      setValue('currentBalance', initialBalance, { shouldValidate: true, shouldDirty: false });
+    }
+  }, [account, initialBalance, setValue]);
 
   return (
     <Modal
@@ -128,8 +135,19 @@ export function AccountFormModal({
 
           <FieldLabel className="space-y-2">
             <span>Saldo atual</span>
-            <Input {...register('currentBalance')} inputMode="decimal" placeholder="0.00" />
+            <Input
+              {...register('currentBalance')}
+              inputMode="decimal"
+              placeholder="0.00"
+              readOnly
+              className="cursor-not-allowed opacity-80"
+            />
             <FieldError>{errors.currentBalance?.message}</FieldError>
+            <p className="text-caption text-text-secondary">
+              {account
+                ? 'Saldo atual e controlado pelo sistema a partir do saldo inicial e dos lancamentos.'
+                : 'Ao criar a conta, o saldo atual comeca igual ao saldo inicial.'}
+            </p>
           </FieldLabel>
         </div>
 
