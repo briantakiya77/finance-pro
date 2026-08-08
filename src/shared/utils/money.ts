@@ -27,8 +27,7 @@ export function addDecimalMoney(left: string, right: string) {
   const [leftInteger, leftDecimal = '00'] = normalizeDecimalMoneyInput(left).split('.');
   const [rightInteger, rightDecimal = '00'] = normalizeDecimalMoneyInput(right).split('.');
   const leftCents = BigInt(leftInteger) * 100n + BigInt(leftDecimal.padEnd(2, '0').slice(0, 2));
-  const rightCents =
-    BigInt(rightInteger) * 100n + BigInt(rightDecimal.padEnd(2, '0').slice(0, 2));
+  const rightCents = BigInt(rightInteger) * 100n + BigInt(rightDecimal.padEnd(2, '0').slice(0, 2));
   const totalCents = leftCents + rightCents;
 
   return `${totalCents / 100n}.${String(totalCents % 100n).padStart(2, '0')}`;

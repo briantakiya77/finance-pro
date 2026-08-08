@@ -28,11 +28,13 @@ describe('financial hardening migration', () => {
       'create or replace function public.soft_delete_transaction(p_transaction_id uuid)'
     );
     expect(hardeningMigration).toContain('security definer');
-    expect(hardeningMigration).toContain("set search_path = public");
+    expect(hardeningMigration).toContain('set search_path = public');
   });
 
   it('protege current_balance contra update direto no cliente', () => {
-    expect(hardeningMigration).toContain('create or replace function public.guard_account_balances()');
+    expect(hardeningMigration).toContain(
+      'create or replace function public.guard_account_balances()'
+    );
     expect(hardeningMigration).toContain("raise exception 'current_balance is system managed'");
     expect(hardeningMigration).toContain('create trigger accounts_guard_account_balances');
   });

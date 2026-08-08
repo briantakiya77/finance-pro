@@ -1,4 +1,4 @@
-import logoUrl from '@/assets/logo.svg';
+import { BrandLogo } from '@/shared/components/brand/BrandLogo';
 import { cn } from '@/shared/utils/cn';
 
 type BrandMarkProps = {
@@ -10,11 +10,15 @@ type BrandMarkProps = {
 export function BrandMark({ collapsed = false, compact = false, className }: BrandMarkProps) {
   return (
     <div className={cn('flex min-w-0 items-center gap-3', className)}>
-      <img src={logoUrl} alt="Finance Pro" className="h-9 w-9 shrink-0" />
+      <BrandLogo
+        variant="mark"
+        theme="dark"
+        size={compact || collapsed ? 'sm' : 'md'}
+        decorative={collapsed}
+      />
       {!collapsed && !compact && (
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-text-primary">Finance Pro</p>
-          <p className="truncate text-caption text-text-secondary">Controle inteligente</p>
         </div>
       )}
     </div>

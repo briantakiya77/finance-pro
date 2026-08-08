@@ -7,11 +7,7 @@ import { ForgotPasswordRoute } from '@/modules/auth/routes/ForgotPasswordRoute';
 import { LoginRoute } from '@/modules/auth/routes/LoginRoute';
 import { NewPasswordRoute } from '@/modules/auth/routes/NewPasswordRoute';
 import { SignUpRoute } from '@/modules/auth/routes/SignUpRoute';
-import {
-  createMockSession,
-  getSupabaseAuthMock,
-  setMockSession
-} from '@/test/mocks/supabaseAuth';
+import { createMockSession, getSupabaseAuthMock, setMockSession } from '@/test/mocks/supabaseAuth';
 
 type TestInitialEntry =
   | string
@@ -83,9 +79,7 @@ describe('auth routes', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Enviar link de recuperacao' }));
 
-    expect(
-      await screen.findByText(/Se existir uma conta com esse e-mail/i)
-    ).toBeTruthy();
+    expect(await screen.findByText(/Se existir uma conta com esse e-mail/i)).toBeTruthy();
   });
 
   it('exibe sucesso ao criar conta', async () => {

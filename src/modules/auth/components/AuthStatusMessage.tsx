@@ -9,10 +9,7 @@ type AuthStatusMessageProps = {
   tone?: 'error' | 'success' | 'info';
 };
 
-export function AuthStatusMessage({
-  children,
-  tone = 'info'
-}: AuthStatusMessageProps) {
+export function AuthStatusMessage({ children, tone = 'info' }: AuthStatusMessageProps) {
   return (
     <div
       className={cn(

@@ -10,14 +10,7 @@ import type {
   TransactionFormValues,
   TransactionWithRelations
 } from '@/modules/transactions/types/transactions';
-import {
-  Button,
-  FieldError,
-  FieldLabel,
-  Input,
-  Modal,
-  Select
-} from '@/shared/components/ui';
+import { Button, FieldError, FieldLabel, Input, Modal, Select } from '@/shared/components/ui';
 
 type TransactionFormModalProps = {
   isSubmitting: boolean;

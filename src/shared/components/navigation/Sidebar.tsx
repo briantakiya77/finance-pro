@@ -1,7 +1,7 @@
-import { ChevronLeft, Landmark, LayoutDashboard, ReceiptText } from 'lucide-react';
+import { ChevronLeft, CreditCard, Landmark, LayoutDashboard, ReceiptText } from 'lucide-react';
 import { NavLink } from 'react-router';
 
-import { BrandMark } from '@/shared/components/brand/BrandMark';
+import { BrandLogo } from '@/shared/components/brand/BrandLogo';
 import { IconButton } from '@/shared/components/ui/IconButton';
 import { cn } from '@/shared/utils/cn';
 
@@ -13,6 +13,7 @@ type SidebarProps = {
 const navigationItems = [
   { label: 'Inicio', href: '/', icon: LayoutDashboard },
   { label: 'Contas', href: '/contas', icon: Landmark },
+  { label: 'Cartoes', href: '/cartoes', icon: CreditCard },
   { label: 'Lancamentos', href: '/lancamentos', icon: ReceiptText }
 ];
 
@@ -23,7 +24,12 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       className="fixed inset-y-0 left-0 z-40 hidden overflow-hidden border-r border-border bg-background transition-[width] duration-slow ease-[var(--ease-premium)] xl:flex xl:flex-col"
     >
       <div className="flex h-[4.5rem] items-center justify-between gap-2 border-b border-border px-4">
-        <BrandMark collapsed={isCollapsed} />
+        <BrandLogo
+          variant={isCollapsed ? 'mark' : 'horizontal'}
+          theme="dark"
+          size={isCollapsed ? 'sm' : 'md'}
+          className={isCollapsed ? '' : 'max-w-[11.5rem]'}
+        />
         {!isCollapsed && (
           <IconButton label="Recolher menu" icon={<ChevronLeft size={18} />} onClick={onToggle} />
         )}
@@ -79,9 +85,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             isCollapsed && 'justify-center border-transparent bg-transparent p-0'
           )}
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-gradient text-caption font-semibold">
-            FP
-          </span>
+          <BrandLogo variant="mark" theme="dark" size="sm" decorative />
           {!isCollapsed && (
             <div className="min-w-0">
               <p className="truncate text-caption font-medium text-text-primary">Finance Pro</p>

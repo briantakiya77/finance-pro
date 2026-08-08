@@ -73,8 +73,8 @@ export function LoginRoute() {
         <div className="space-y-2 text-sm text-text-secondary">
           <p className="font-semibold text-text-primary">Sessao protegida</p>
           <p>
-            O aplicativo redireciona voce de volta para a rota solicitada apos o login e
-            mantém a sessao sincronizada entre recarregamentos.
+            O aplicativo redireciona voce de volta para a rota solicitada apos o login e mantém a
+            sessao sincronizada entre recarregamentos.
           </p>
         </div>
       }

@@ -38,27 +38,34 @@ export const dashboardService = {
       const { from, to } = getCurrentMonthRange();
       const client = requireSupabaseClient();
 
-      const [accountsResponse, incomeResponse, expenseResponse] = await Promise.all([
-        client
-          .from('accounts')
-          .select('current_balance', { count: 'exact' })
-          .eq('is_active', true)
-          .is('deleted_at', null),
-        client
-          .from('transactions')
-          .select('amount')
-          .eq('type', 'income')
-          .gte('transaction_date', from)
-          .lt('transaction_date', to)
-          .is('deleted_at', null),
-        client
-          .from('transactions')
-          .select('amount')
-          .eq('type', 'expense')
-          .gte('transaction_date', from)
-          .lt('transaction_date', to)
-          .is('deleted_at', null)
-      ]);
+      const [accountsResponse, incomeResponse, expenseResponse, cardExpenseResponse] =
+        await Promise.all([
+          client
+            .from('accounts')
+            .select('current_balance', { count: 'exact' })
+            .eq('is_active', true)
+            .is('deleted_at', null),
+          client
+            .from('transactions')
+            .select('amount')
+            .eq('type', 'income')
+            .gte('transaction_date', from)
+            .lt('transaction_date', to)
+            .is('deleted_at', null),
+          client
+            .from('transactions')
+            .select('amount')
+            .eq('type', 'expense')
+            .gte('transaction_date', from)
+            .lt('transaction_date', to)
+            .is('deleted_at', null),
+          client
+            .from('credit_card_transactions')
+            .select('amount')
+            .gte('purchase_date', from)
+            .lt('purchase_date', to)
+            .is('deleted_at', null)
+        ]);
 
       if (accountsResponse.error) {
         return { data: null, error: mapDashboardError(accountsResponse.error) };
@@ -72,6 +79,19 @@ export const dashboardService = {
         return { data: null, error: mapDashboardError(expenseResponse.error) };
       }
 
+      if (cardExpenseResponse.error) {
+        return { data: null, error: mapDashboardError(cardExpenseResponse.error) };
+      }
+
+      const bankExpenseTotal = (expenseResponse.data ?? []).reduce(
+        (total, transaction) => addDecimalMoney(total, transaction.amount),
+        '0.00'
+      );
+      const cardExpenseTotal = (cardExpenseResponse.data ?? []).reduce(
+        (total, transaction) => addDecimalMoney(total, transaction.amount),
+        '0.00'
+      );
+
       return {
         data: {
           accountsCount: accountsResponse.count ?? 0,
@@ -83,10 +103,7 @@ export const dashboardService = {
             (total, transaction) => addDecimalMoney(total, transaction.amount),
             '0.00'
           ),
-          currentMonthExpense: (expenseResponse.data ?? []).reduce(
-            (total, transaction) => addDecimalMoney(total, transaction.amount),
-            '0.00'
-          )
+          currentMonthExpense: addDecimalMoney(bankExpenseTotal, cardExpenseTotal)
         },
         error: null
       };

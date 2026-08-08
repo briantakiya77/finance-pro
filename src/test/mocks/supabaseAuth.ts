@@ -133,8 +133,10 @@ function createQueryMock(tableName: string) {
   const query = {
     eq: vi.fn(() => query),
     gte: vi.fn(() => query),
+    in: vi.fn(() => query),
     insert: vi.fn(() => query),
     is: vi.fn(() => query),
+    limit: vi.fn(() => query),
     lt: vi.fn(() => query),
     order: vi.fn(() => query),
     range: vi.fn(async () => ({
@@ -149,9 +151,7 @@ function createQueryMock(tableName: string) {
     update: vi.fn(() => query),
     then: (resolve: (value: unknown) => void) => {
       const response =
-        tableName === 'accounts'
-          ? { count: 0, data: [], error: null }
-          : { data: [], error: null };
+        tableName === 'accounts' ? { count: 0, data: [], error: null } : { data: [], error: null };
 
       return Promise.resolve(response).then(resolve);
     }

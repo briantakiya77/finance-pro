@@ -12,6 +12,7 @@ import { SignUpRoute } from '@/modules/auth/routes/SignUpRoute';
 import { RouteLoading } from '@/shared/components/ui/RouteLoading';
 
 const AccountsPage = lazy(() => import('@/modules/accounts/pages/AccountsPage'));
+const CreditCardsPage = lazy(() => import('@/modules/credit-cards/pages/CreditCardsPage'));
 const DashboardPage = lazy(() => import('@/modules/dashboard/pages/DashboardPage'));
 const TransactionsPage = lazy(() => import('@/modules/transactions/pages/TransactionsPage'));
 
@@ -74,6 +75,14 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<RouteLoading />}>
             <TransactionsPage />
+          </Suspense>
+        )
+      },
+      {
+        path: 'cartoes',
+        element: (
+          <Suspense fallback={<RouteLoading />}>
+            <CreditCardsPage />
           </Suspense>
         )
       }

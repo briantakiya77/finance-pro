@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { Link } from 'react-router';
 
-import { BrandMark } from '@/shared/components/brand/BrandMark';
+import { BrandLogo } from '@/shared/components/brand/BrandLogo';
 import { Badge, Card } from '@/shared/components/ui';
 
 type AuthPageShellProps = {
@@ -27,7 +27,14 @@ export function AuthPageShell({
       <div className="absolute left-1/2 top-0 h-px w-2/3 -translate-x-1/2 bg-accent-gradient opacity-70" />
       <div className="grid w-full gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <div className="max-w-2xl">
-          <BrandMark className="mb-10" />
+          <div className="mb-10 flex justify-center lg:justify-start">
+            <BrandLogo
+              variant="horizontal"
+              theme="dark"
+              size="lg"
+              className="max-w-[12rem] sm:max-w-[14rem]"
+            />
+          </div>
           <Badge variant="accent" className="mb-5">
             <span className="h-2 w-2 rounded-full bg-success" />
             {eyebrow}
