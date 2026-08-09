@@ -14,6 +14,11 @@ const accountFormModal = readFileSync(
 );
 
 describe('accounts integrity protections', () => {
+  it('inclui o user_id autenticado ao criar conta para respeitar o RLS', () => {
+    expect(accountService).toContain('user_id: userId');
+    expect(accountService).toContain('auth.getSession()');
+  });
+
   it('nao envia current_balance livremente ao editar conta', () => {
     expect(accountService).toContain('current_balance: normalizedInitialBalance');
     expect(accountService).not.toContain('return mapFormValuesToInsert(values);');

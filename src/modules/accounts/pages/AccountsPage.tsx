@@ -26,7 +26,11 @@ export default function AccountsPage() {
   const [editingAccount, setEditingAccount] = useState<AccountRow | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [accountPendingDelete, setAccountPendingDelete] = useState<AccountRow | null>(null);
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{
+    message: string;
+    title: string;
+    variant: 'danger' | 'success';
+  } | null>(null);
 
   const accountsQuery = useAccountsQuery();
   const createAccountMutation = useCreateAccountMutation();
@@ -39,10 +43,18 @@ export default function AccountsPage() {
   async function handleCreateAccount(values: AccountFormValues) {
     try {
       await createAccountMutation.mutateAsync(values);
-      setFeedbackMessage('Conta criada com sucesso.');
+      setFeedback({
+        message: 'Conta criada com sucesso.',
+        title: 'Tudo certo',
+        variant: 'success'
+      });
       setIsCreateModalOpen(false);
     } catch (error) {
-      setFeedbackMessage(getFriendlyErrorMessage(error));
+      setFeedback({
+        message: getFriendlyErrorMessage(error),
+        title: 'Nao foi possivel concluir',
+        variant: 'danger'
+      });
     }
   }
 
@@ -56,10 +68,18 @@ export default function AccountsPage() {
         accountId: editingAccount.id,
         values
       });
-      setFeedbackMessage('Conta atualizada com sucesso.');
+      setFeedback({
+        message: 'Conta atualizada com sucesso.',
+        title: 'Tudo certo',
+        variant: 'success'
+      });
       setEditingAccount(null);
     } catch (error) {
-      setFeedbackMessage(getFriendlyErrorMessage(error));
+      setFeedback({
+        message: getFriendlyErrorMessage(error),
+        title: 'Nao foi possivel concluir',
+        variant: 'danger'
+      });
     }
   }
 
@@ -70,19 +90,35 @@ export default function AccountsPage() {
 
     try {
       await deleteAccountMutation.mutateAsync(accountPendingDelete.id);
-      setFeedbackMessage('Conta removida com exclusao logica.');
+      setFeedback({
+        message: 'Conta removida com exclusao logica.',
+        title: 'Tudo certo',
+        variant: 'success'
+      });
       setAccountPendingDelete(null);
     } catch (error) {
-      setFeedbackMessage(getFriendlyErrorMessage(error));
+      setFeedback({
+        message: getFriendlyErrorMessage(error),
+        title: 'Nao foi possivel concluir',
+        variant: 'danger'
+      });
     }
   }
 
   async function handleSetPrimaryAccount(account: AccountRow) {
     try {
       await setPrimaryAccountMutation.mutateAsync(account.id);
-      setFeedbackMessage('Conta principal atualizada.');
+      setFeedback({
+        message: 'Conta principal atualizada.',
+        title: 'Tudo certo',
+        variant: 'success'
+      });
     } catch (error) {
-      setFeedbackMessage(getFriendlyErrorMessage(error));
+      setFeedback({
+        message: getFriendlyErrorMessage(error),
+        title: 'Nao foi possivel concluir',
+        variant: 'danger'
+      });
     }
   }
 
@@ -118,9 +154,9 @@ export default function AccountsPage() {
           }
         />
 
-        {feedbackMessage && (
-          <Toast variant="success" title="Tudo certo">
-            {feedbackMessage}
+        {feedback && (
+          <Toast variant={feedback.variant} title={feedback.title}>
+            {feedback.message}
           </Toast>
         )}
 

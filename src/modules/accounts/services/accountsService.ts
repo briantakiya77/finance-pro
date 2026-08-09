@@ -15,7 +15,9 @@ const accountsErrorMessages: Record<string, string> = {
   'duplicate key value violates unique constraint "accounts_user_id_primary_unique"':
     'Ja existe uma conta principal definida.',
   'new row violates row-level security policy for table "accounts"':
-    'Sua sessao nao tem permissao para alterar esta conta.'
+    'Sua sessao nao tem permissao para alterar esta conta.',
+  'null value in column "user_id" of relation "accounts" violates not-null constraint':
+    'Sua sessao expirou. Entre novamente para criar contas.'
 };
 
 function mapAccountsError(error: unknown) {
@@ -30,10 +32,11 @@ function normalizeMoneyValue(value: string) {
   return value.replace(',', '.');
 }
 
-function mapFormValuesToInsert(values: AccountFormValues): AccountInsert {
+function mapFormValuesToInsert(values: AccountFormValues, userId: string): AccountInsert {
   const normalizedInitialBalance = normalizeMoneyValue(values.initialBalance);
 
   return {
+    user_id: userId,
     name: values.name.trim(),
     bank: values.bank.trim(),
     type: values.type,
@@ -64,6 +67,24 @@ function createAccountErrorResult<T>(error: unknown): AccountMutationResult<T> {
     data: null,
     error: mapAccountsError(error)
   };
+}
+
+async function getAuthenticatedUserId() {
+  const { data, error } = await requireSupabaseClient().auth.getSession();
+
+  if (error) {
+    throw error;
+  }
+
+  const userId = data.session?.user?.id;
+
+  if (!userId) {
+    throw new Error(
+      'Sua sessao expirou. Entre novamente para criar ou alterar contas bancarias.'
+    );
+  }
+
+  return userId;
 }
 
 export const accountsService = {
@@ -100,9 +121,10 @@ export const accountsService = {
     }
 
     try {
+      const userId = await getAuthenticatedUserId();
       const { data, error } = await requireSupabaseClient()
         .from('accounts')
-        .insert(mapFormValuesToInsert(parsedValues.data))
+        .insert(mapFormValuesToInsert(parsedValues.data, userId))
         .select()
         .single();
 
