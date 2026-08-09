@@ -1,8 +1,10 @@
 import type {
   AssistantChatRequest,
   AssistantChatResponse,
+  AssistantConversationHistoryMessage,
   AssistantConversation,
-  AssistantStoredMessage
+  AssistantStoredMessage,
+  PurchaseSimulationInput
 } from '../src/modules/ai/types/assistant.js';
 import type { AIProvider } from './ai-provider.js';
 import { FinancialContextService, selectToolsForMessage } from './financial-context.js';
@@ -12,13 +14,14 @@ import type { AuthenticatedRequestContext } from './supabase.js';
 
 const maxMessageLength = 1200;
 const maxRecentMessages = 8;
+const maxHistoryMessageLength = 1000;
 
 function buildTitle(message: string) {
   return message.trim().slice(0, 80) || 'Nova conversa';
 }
 
 function isSimulationMessage(message: string) {
-  return /compr|posso|parcel|avista|à vista|a vista|simul/i.test(message);
+  return /compr|posso|parcel|\d{1,2}\s*x|avista|à vista|a vista|simul/i.test(message);
 }
 
 async function ensureConversation(
@@ -75,6 +78,56 @@ async function loadRecentMessages(
   return (data ?? []).reverse();
 }
 
+export function toConversationHistory(
+  messages: Array<{ content: string; role: 'assistant' | 'user' }>
+): AssistantConversationHistoryMessage[] {
+  return messages.slice(-maxRecentMessages).map((message) => ({
+    content: message.content.slice(0, maxHistoryMessageLength),
+    role: message.role
+  }));
+}
+
+function parseInstallments(message: string) {
+  const installmentsMatch = message.match(/(\d{1,2})\s*x|\b(\d{1,2})\s*parcel/i);
+  const installments = Number(installmentsMatch?.[1] ?? installmentsMatch?.[2] ?? 0);
+
+  return Number.isFinite(installments) && installments > 0 ? installments : null;
+}
+
+export function resolveSimulationInput(
+  message: string,
+  conversationHistory: AssistantConversationHistoryMessage[]
+): PurchaseSimulationInput | null {
+  const currentInput = parseSimulationInput(message);
+
+  if (currentInput) {
+    return currentInput;
+  }
+
+  if (!isSimulationMessage(message)) {
+    return null;
+  }
+
+  const currentInstallments = parseInstallments(message);
+
+  for (const historyMessage of [...conversationHistory].reverse()) {
+    if (historyMessage.role !== 'user') {
+      continue;
+    }
+
+    const previousInput = parseSimulationInput(historyMessage.content);
+
+    if (previousInput) {
+      return {
+        installments: currentInstallments ?? previousInput.installments,
+        purchaseAmount: previousInput.purchaseAmount
+      };
+    }
+  }
+
+  return null;
+}
+
 async function insertMessage(
   requestContext: AuthenticatedRequestContext,
   conversationId: string,
@@ -126,10 +179,12 @@ export class AIOrchestrator {
       request.conversationId,
       message
     );
-    await loadRecentMessages(this.requestContext, conversation.id);
+    const conversationHistory = toConversationHistory(
+      await loadRecentMessages(this.requestContext, conversation.id)
+    );
 
     const tools = selectToolsForMessage(message);
-    const simulationInput = isSimulationMessage(message) ? parseSimulationInput(message) : null;
+    const simulationInput = resolveSimulationInput(message, conversationHistory);
     const context = await new FinancialContextService(this.requestContext).buildContext(
       tools,
       Boolean(simulationInput && simulationInput.installments > 3)
@@ -140,6 +195,7 @@ export class AIOrchestrator {
 
     const userMessage = await insertMessage(this.requestContext, conversation.id, 'user', message);
     const response = await this.provider.generateResponse({
+      conversationHistory,
       context,
       message,
       simulation,

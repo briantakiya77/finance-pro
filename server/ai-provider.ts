@@ -1,4 +1,5 @@
 import type {
+  AssistantConversationHistoryMessage,
   AssistantStructuredResponse,
   PurchaseSimulation
 } from '../src/modules/ai/types/assistant.js';
@@ -7,6 +8,7 @@ import { formatCurrency } from './money.js';
 import type { FinancialContext } from './financial-context.js';
 
 export type AIProviderRequest = {
+  conversationHistory: AssistantConversationHistoryMessage[];
   context: FinancialContext;
   message: string;
   simulation?: PurchaseSimulation;
@@ -121,6 +123,10 @@ export class OpenAIProvider implements AIProvider {
               content: request.systemPrompt,
               role: 'system'
             },
+            ...request.conversationHistory.map((message) => ({
+              content: message.content,
+              role: message.role
+            })),
             {
               content: JSON.stringify({
                 financialContext: request.context,
@@ -166,15 +172,31 @@ export class GeminiProvider implements AIProvider {
       `https://generativelanguage.googleapis.com/v1beta/models/${this.config.aiModel}:generateContent?key=${this.config.aiApiKey}`,
       {
         body: JSON.stringify({
+          systemInstruction: {
+            parts: [
+              {
+                text: request.systemPrompt
+              }
+            ]
+          },
           contents: [
-            {
+            ...request.conversationHistory.map((message) => ({
               parts: [
                 {
-                  text: `${request.systemPrompt}\n\n${JSON.stringify({
+                  text: message.content
+                }
+              ],
+              role: message.role === 'assistant' ? 'model' : 'user'
+            })),
+            {
+              role: 'user',
+              parts: [
+                {
+                  text: JSON.stringify({
                     financialContext: request.context,
                     purchaseSimulation: request.simulation ?? null,
                     userMessage: request.message
-                  })}`
+                  })
                 }
               ]
             }

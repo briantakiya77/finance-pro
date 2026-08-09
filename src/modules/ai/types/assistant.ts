@@ -18,6 +18,11 @@ export type AssistantStoredMessage = {
   user_id: string;
 };
 
+export type AssistantConversationHistoryMessage = {
+  content: string;
+  role: AssistantMessageRole;
+};
+
 export type DecisionScore = 'attention' | 'not_feasible' | 'risky' | 'safe';
 
 export type PurchaseSimulationInput = {

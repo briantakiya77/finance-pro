@@ -16,14 +16,21 @@ function toInput(value: unknown) {
 }
 
 export function parseSimulationInput(message: string): PurchaseSimulationInput | null {
-  const amountMatch = message.match(/(?:r\$|\b)(\d{1,3}(?:\.\d{3})*|\d+)(?:,\d{1,2})?/i);
+  const amountMatch =
+    message.match(/r\$\s*(?<amount>(?:\d{1,3}(?:\.\d{3})*|\d+)(?:,\d{1,2})?)/i) ??
+    message.match(
+      /\b(?:de|por|valor de)\s+(?<amount>(?:\d{1,3}(?:\.\d{3})+|\d{4,})(?:,\d{1,2})?|\d+,\d{1,2})\b(?!\s*(?:x|parcel))/i
+    ) ??
+    message.match(
+      /\b(?<amount>(?:\d{1,3}(?:\.\d{3})+|\d{4,})(?:,\d{1,2})?|\d+,\d{1,2})\b(?!\s*(?:x|parcel))/i
+    );
   const installmentsMatch = message.match(/(\d{1,2})\s*x|\b(\d{1,2})\s*parcel/i);
 
   if (!amountMatch) {
     return null;
   }
 
-  const rawAmount = amountMatch[0].replace(/r\$/i, '').trim();
+  const rawAmount = amountMatch.groups?.amount ?? amountMatch[0].replace(/r\$/i, '').trim();
   const installments = Number(installmentsMatch?.[1] ?? installmentsMatch?.[2] ?? 1);
 
   return {
