@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useEffect, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 
 import { creditCardFormSchema } from '@/modules/credit-cards/schemas/creditCardSchema';
 import {
@@ -16,7 +16,8 @@ import {
   Input,
   Modal,
   Select,
-  Switch
+  Switch,
+  Toast
 } from '@/shared/components/ui';
 
 type CreditCardFormModalProps = {
@@ -46,7 +47,9 @@ export function CreditCardFormModal({
   onClose,
   onSubmit
 }: CreditCardFormModalProps) {
+  const [hasValidationFeedback, setHasValidationFeedback] = useState(false);
   const {
+    control,
     formState: { errors },
     handleSubmit,
     register,
@@ -60,9 +63,14 @@ export function CreditCardFormModal({
 
   useEffect(() => {
     reset(mapCardToFormValues(card));
+    setHasValidationFeedback(false);
   }, [card, reset]);
 
   const selectedColor = watch('color');
+  const submitValidCard = (values: CreditCardFormValues) => {
+    setHasValidationFeedback(false);
+    onSubmit(values);
+  };
 
   return (
     <Modal
@@ -70,7 +78,16 @@ export function CreditCardFormModal({
       description="Cadastre limite, fechamento e vencimento sem armazenar dados sensiveis."
       onClose={onClose}
     >
-      <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+      <form
+        className="space-y-6"
+        onSubmit={handleSubmit(submitValidCard, () => setHasValidationFeedback(true))}
+      >
+        {hasValidationFeedback && (
+          <Toast variant="danger" title="Revise os campos">
+            Revise os campos destacados antes de continuar.
+          </Toast>
+        )}
+
         <div className="grid gap-5 md:grid-cols-2">
           <FieldLabel className="space-y-2">
             <span>Nome</span>
@@ -142,7 +159,20 @@ export function CreditCardFormModal({
         </div>
 
         <div className="rounded-control border border-border bg-background/70 px-4 py-3">
-          <Switch {...register('isActive')} label="Cartao ativo para novas compras" />
+          <Controller
+            control={control}
+            name="isActive"
+            render={({ field }) => (
+              <Switch
+                checked={field.value}
+                label="Cartao ativo para novas compras"
+                name={field.name}
+                onBlur={field.onBlur}
+                onChange={(event) => field.onChange(event.target.checked)}
+                ref={field.ref}
+              />
+            )}
+          />
         </div>
 
         <div className="flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:justify-end">

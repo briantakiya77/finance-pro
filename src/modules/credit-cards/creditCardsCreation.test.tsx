@@ -158,6 +158,7 @@ describe('credit card creation', () => {
       expect(onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
           bank: 'Nubank',
+          brand: '',
           closingDay: 10,
           color: '#8B5CF6',
           dueDay: 15,
@@ -165,19 +166,62 @@ describe('credit card creation', () => {
           lastFour: '1234',
           limitAmount: '3000.00',
           name: 'Cartao principal'
-        }),
-        expect.anything()
+        })
       );
     });
   });
 
-  it('botao submit exibe FieldError quando houver validacao', async () => {
+  it('aceita os valores PICPAY e dispara submit com cartao ativo', async () => {
+    const onSubmit = vi.fn();
+
+    render(<CreditCardFormModal isSubmitting={false} onClose={vi.fn()} onSubmit={onSubmit} />);
+
+    fireEvent.change(screen.getByPlaceholderText('Cartao principal'), {
+      target: { value: 'PICPAY PLATINUM' }
+    });
+    fireEvent.change(screen.getByPlaceholderText('Nubank'), {
+      target: { value: 'PICPAY' }
+    });
+    fireEvent.change(screen.getByPlaceholderText('1234'), {
+      target: { value: '7037' }
+    });
+    fireEvent.change(screen.getByPlaceholderText('0,00'), {
+      target: { value: '2809' }
+    });
+    fireEvent.change(screen.getByPlaceholderText('10'), {
+      target: { value: '03' }
+    });
+    fireEvent.change(screen.getByPlaceholderText('15'), {
+      target: { value: '10' }
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Criar cartao' }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bank: 'PICPAY',
+          brand: '',
+          closingDay: 3,
+          color: '#8B5CF6',
+          dueDay: 10,
+          isActive: true,
+          lastFour: '7037',
+          limitAmount: '2809.00',
+          name: 'PICPAY PLATINUM'
+        })
+      );
+    });
+  });
+
+  it('botao submit exibe feedback global e FieldError quando houver validacao', async () => {
     const onSubmit = vi.fn();
 
     render(<CreditCardFormModal isSubmitting={false} onClose={vi.fn()} onSubmit={onSubmit} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Criar cartao' }));
 
+    expect(await screen.findByText('Revise os campos destacados antes de continuar.')).toBeTruthy();
     expect(await screen.findByText('Informe o nome do cartao.')).toBeTruthy();
     expect(onSubmit).not.toHaveBeenCalled();
   });
