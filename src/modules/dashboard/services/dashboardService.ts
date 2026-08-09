@@ -38,6 +38,8 @@ export const dashboardService = {
       const { from, to } = getCurrentMonthRange();
       const client = requireSupabaseClient();
 
+      await client.rpc('generate_due_recurring_transactions');
+
       const [accountsResponse, incomeResponse, expenseResponse, cardExpenseResponse] =
         await Promise.all([
           client

@@ -51,7 +51,32 @@ export const creditCardPurchaseSchema = z.object({
     .refine((value) => /^\d+(\.\d{2})$/.test(value), 'Informe um valor monetario valido.')
     .refine((value) => value !== '0.00', 'O valor precisa ser maior que zero.'),
   purchaseDate: z.string().min(1, 'Informe a data da compra.'),
-  notes: z.string().max(1000, 'As observacoes devem ter no maximo 1000 caracteres.').default('')
+  notes: z.string().max(1000, 'As observacoes devem ter no maximo 1000 caracteres.').default(''),
+  purchaseMode: z.enum(['single', 'installment']),
+  installmentCount: z.string().default('1')
+}).superRefine((value, context) => {
+  if (value.purchaseMode !== 'installment') {
+    return;
+  }
+
+  if (!/^\d+$/.test(value.installmentCount)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['installmentCount'],
+      message: 'Informe a quantidade de parcelas.'
+    });
+    return;
+  }
+
+  const count = Number(value.installmentCount);
+
+  if (count < 2 || count > 60) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['installmentCount'],
+      message: 'As parcelas devem ficar entre 2 e 60.'
+    });
+  }
 });
 
 export const creditCardPaymentSchema = z.object({

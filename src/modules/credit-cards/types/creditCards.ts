@@ -25,6 +25,8 @@ export const creditCardBrandOptions = [
 export const creditCardColorOptions = [...creditCardColorValues];
 
 export type CreditCardInvoiceStatus = Database['public']['Enums']['credit_card_invoice_status'];
+export type CreditCardInstallmentPlanStatus =
+  Database['public']['Enums']['credit_card_installment_plan_status'];
 export type CreditCardRow = Database['public']['Tables']['credit_cards']['Row'];
 export type CreditCardInsert = Database['public']['Tables']['credit_cards']['Insert'];
 export type CreditCardUpdate = Database['public']['Tables']['credit_cards']['Update'];
@@ -33,6 +35,15 @@ export type CreditCardTransactionRow =
   Database['public']['Tables']['credit_card_transactions']['Row'];
 export type CreditCardInvoicePaymentRow =
   Database['public']['Tables']['credit_card_invoice_payments']['Row'];
+export type CreditCardInstallmentPlanRow =
+  Database['public']['Tables']['credit_card_installment_plans']['Row'];
+
+export const creditCardPurchaseModeOptions = [
+  { value: 'single', label: 'Compra unica' },
+  { value: 'installment', label: 'Parcelada' }
+] as const;
+
+export type CreditCardPurchaseMode = (typeof creditCardPurchaseModeOptions)[number]['value'];
 
 export type CreditCardFormValues = {
   name: string;
@@ -53,6 +64,8 @@ export type CreditCardPurchaseFormValues = {
   amount: string;
   purchaseDate: string;
   notes: string;
+  purchaseMode: CreditCardPurchaseMode;
+  installmentCount: string;
 };
 
 export type CreditCardPaymentFormValues = {
@@ -77,6 +90,11 @@ export type CreditCardInvoiceWithPayments = CreditCardInvoiceRow & {
 
 export type CreditCardPurchaseWithRelations = CreditCardTransactionRow & {
   categories: Pick<CategoryRow, 'id' | 'name' | 'color' | 'icon' | 'type'> | null;
+};
+
+export type CreditCardInstallmentPlanWithRelations = CreditCardInstallmentPlanRow & {
+  categories: Pick<CategoryRow, 'id' | 'name' | 'color' | 'icon' | 'type'> | null;
+  transactions: CreditCardPurchaseWithRelations[];
 };
 
 export type CreditCardPaymentWithAccount = CreditCardInvoicePaymentRow & {

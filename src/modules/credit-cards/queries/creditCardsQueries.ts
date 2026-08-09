@@ -131,7 +131,11 @@ export function useUpdateCreditCardPurchaseMutation() {
   const invalidate = useInvalidateCreditCardData();
 
   return useMutation({
-    mutationFn: async (payload: { purchaseId: string; values: CreditCardPurchaseFormValues }) => {
+    mutationFn: async (payload: {
+      purchaseId: string;
+      installmentPlanId?: string | null;
+      values: CreditCardPurchaseFormValues;
+    }) => {
       const result = await creditCardsService.updatePurchase(payload);
 
       if (result.error) {
@@ -150,6 +154,23 @@ export function useDeleteCreditCardPurchaseMutation() {
   return useMutation({
     mutationFn: async (purchaseId: string) => {
       const result = await creditCardsService.softDeletePurchase(purchaseId);
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      return result.data;
+    },
+    onSuccess: invalidate
+  });
+}
+
+export function useCancelCreditCardInstallmentPlanMutation() {
+  const invalidate = useInvalidateCreditCardData();
+
+  return useMutation({
+    mutationFn: async (installmentPlanId: string) => {
+      const result = await creditCardsService.cancelInstallmentPlan(installmentPlanId);
 
       if (result.error) {
         throw new Error(result.error);

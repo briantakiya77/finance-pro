@@ -84,11 +84,15 @@ export function CreditCardActionMenu({
 type CreditCardPurchaseActionMenuProps = {
   onDelete: () => void;
   onEdit: () => void;
+  deleteLabel?: string;
+  editLabel?: string;
 };
 
 export function CreditCardPurchaseActionMenu({
   onDelete,
-  onEdit
+  onEdit,
+  deleteLabel = 'Excluir compra',
+  editLabel = 'Editar compra'
 }: CreditCardPurchaseActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -125,7 +129,7 @@ export function CreditCardPurchaseActionMenu({
             }}
           >
             <Pencil size={16} />
-            Editar compra
+            {editLabel}
           </MenuItem>
 
           <MenuItem
@@ -137,7 +141,7 @@ export function CreditCardPurchaseActionMenu({
             }}
           >
             <Trash2 size={16} />
-            Excluir compra
+            {deleteLabel}
           </MenuItem>
         </MenuSurface>
       )}

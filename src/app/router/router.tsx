@@ -14,6 +14,7 @@ import { RouteLoading } from '@/shared/components/ui/RouteLoading';
 const AccountsPage = lazy(() => import('@/modules/accounts/pages/AccountsPage'));
 const CreditCardsPage = lazy(() => import('@/modules/credit-cards/pages/CreditCardsPage'));
 const DashboardPage = lazy(() => import('@/modules/dashboard/pages/DashboardPage'));
+const RecurringPage = lazy(() => import('@/modules/recurring/pages/RecurringPage'));
 const TransactionsPage = lazy(() => import('@/modules/transactions/pages/TransactionsPage'));
 
 export const router = createBrowserRouter([
@@ -83,6 +84,14 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<RouteLoading />}>
             <CreditCardsPage />
+          </Suspense>
+        )
+      },
+      {
+        path: 'recorrencias',
+        element: (
+          <Suspense fallback={<RouteLoading />}>
+            <RecurringPage />
           </Suspense>
         )
       }

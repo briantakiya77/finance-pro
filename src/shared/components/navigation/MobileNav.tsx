@@ -1,4 +1,4 @@
-import { CreditCard, Landmark, LayoutDashboard, ReceiptText } from 'lucide-react';
+import { CreditCard, Landmark, LayoutDashboard, ReceiptText, Repeat } from 'lucide-react';
 import { NavLink } from 'react-router';
 
 import { cn } from '@/shared/utils/cn';
@@ -7,13 +7,14 @@ const mobileItems = [
   { label: 'Inicio', href: '/', icon: LayoutDashboard },
   { label: 'Contas', href: '/contas', icon: Landmark },
   { label: 'Cartoes', href: '/cartoes', icon: CreditCard },
+  { label: 'Recorr.', href: '/recorrencias', icon: Repeat },
   { label: 'Lancamentos', href: '/lancamentos', icon: ReceiptText }
 ];
 
 export function MobileNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/90 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl xl:hidden">
-      <div className="mx-auto grid max-w-md grid-cols-4 gap-2">
+      <div className="mx-auto grid max-w-lg grid-cols-5 gap-2">
         {mobileItems.map((item) => {
           const Icon = item.icon;
 

@@ -13,14 +13,15 @@ import type {
   CreditCardFormValues,
   CreditCardInvoiceDetail,
   CreditCardInvoiceRow,
+  CreditCardInstallmentPlanRow,
   CreditCardListItem,
   CreditCardMutationResult,
   CreditCardPaymentFormValues,
   CreditCardPaymentWithAccount,
   CreditCardPurchaseFormValues,
-  CreditCardTransactionRow,
   CreditCardPurchaseWithRelations,
   CreditCardRow,
+  CreditCardTransactionRow,
   CreditCardUpdate
 } from '@/modules/credit-cards/types/creditCards';
 
@@ -39,7 +40,27 @@ const creditCardsErrorMessages: Record<string, string> = {
   'credit card purchase not found for current user':
     'A compra selecionada nao esta disponivel para sua sessao.',
   'new row violates row-level security policy for table "credit_cards"':
-    'Sua sessao nao tem permissao para alterar este cartao.'
+    'Sua sessao nao tem permissao para alterar este cartao.',
+  'installment count must be between 2 and 60': 'As parcelas devem ficar entre 2 e 60.',
+  'installment purchases must be edited through installment plan metadata':
+    'Edite parcelamentos apenas pela descricao, categoria e observacoes do plano.',
+  'installment purchases must be cancelled through installment plan':
+    'Parcelas devem ser canceladas pelo plano parcelado.',
+  'installment plan not found for current user':
+    'O parcelamento selecionado nao esta disponivel para sua sessao.',
+  'installment plan with paid invoices cannot be cancelled safely':
+    'Este parcelamento ja possui faturas com pagamento e nao pode ser cancelado com seguranca.',
+  'cancelled installment plan cannot be updated':
+    'Parcelamentos cancelados nao podem ser alterados.',
+  'recurring transaction not found for current user':
+    'A recorrencia selecionada nao esta disponivel para sua sessao.',
+  'cancelled recurring transaction cannot be updated':
+    'Recorrencias canceladas nao podem ser alteradas.',
+  'cancelled recurring transaction cannot be resumed':
+    'Recorrencias canceladas nao podem ser retomadas.',
+  'day of month must be between 1 and 31': 'Informe um dia do mes entre 1 e 31.',
+  'end date must be equal or after start date':
+    'A data final precisa ser igual ou posterior a inicial.'
 };
 
 function mapCreditCardsError(error: unknown) {
@@ -141,6 +162,19 @@ function buildCardListItem(
   };
 }
 
+function mapPurchasePayload(values: CreditCardPurchaseFormValues) {
+  return {
+    p_credit_card_id: values.creditCardId,
+    p_category_id: values.categoryId,
+    p_description: values.description,
+    p_amount: values.amount,
+    p_total_amount: values.amount,
+    p_purchase_date: values.purchaseDate,
+    p_notes: values.notes || null,
+    p_installment_count: Number(values.installmentCount)
+  };
+}
+
 export const creditCardsService = {
   async listCreditCards(): Promise<CreditCardMutationResult<CreditCardListItem[]>> {
     try {
@@ -225,7 +259,7 @@ export const creditCardsService = {
           : requireSupabaseClient()
               .from('credit_card_transactions')
               .select(
-                'id,user_id,credit_card_id,invoice_id,category_id,description,amount,purchase_date,notes,client_mutation_id,deleted_at,created_at,updated_at,categories(id,name,color,icon,type)'
+                'id,user_id,credit_card_id,invoice_id,category_id,description,amount,purchase_date,notes,client_mutation_id,installment_plan_id,installment_number,installment_count,deleted_at,created_at,updated_at,categories(id,name,color,icon,type)'
               )
               .in('invoice_id', invoiceIds)
               .is('deleted_at', null)
@@ -356,7 +390,7 @@ export const creditCardsService = {
   async createPurchase(payload: {
     clientMutationId: string;
     values: CreditCardPurchaseFormValues;
-  }): Promise<CreditCardMutationResult<CreditCardTransactionRow>> {
+  }): Promise<CreditCardMutationResult<CreditCardTransactionRow | CreditCardInstallmentPlanRow>> {
     const parsedValues = creditCardPurchaseSchema.safeParse(payload.values);
 
     if (!parsedValues.success) {
@@ -367,6 +401,22 @@ export const creditCardsService = {
     }
 
     try {
+      if (parsedValues.data.purchaseMode === 'installment') {
+        const { data, error } = await requireSupabaseClient().rpc(
+          'create_credit_card_installment_purchase',
+          {
+            ...mapPurchasePayload(parsedValues.data),
+            p_client_mutation_id: payload.clientMutationId
+          }
+        );
+
+        if (error) {
+          return createCreditCardsErrorResult(error);
+        }
+
+        return { data, error: null };
+      }
+
       const { data, error } = await requireSupabaseClient().rpc('create_credit_card_purchase', {
         p_credit_card_id: parsedValues.data.creditCardId,
         p_category_id: parsedValues.data.categoryId,
@@ -383,14 +433,15 @@ export const creditCardsService = {
 
       return { data, error: null };
     } catch (error) {
-      return createCreditCardsErrorResult<CreditCardTransactionRow>(error);
+      return createCreditCardsErrorResult(error);
     }
   },
 
   async updatePurchase(payload: {
     purchaseId: string;
+    installmentPlanId?: string | null;
     values: CreditCardPurchaseFormValues;
-  }): Promise<CreditCardMutationResult<CreditCardTransactionRow>> {
+  }): Promise<CreditCardMutationResult<CreditCardTransactionRow | CreditCardInstallmentPlanRow>> {
     const parsedValues = creditCardPurchaseSchema.safeParse(payload.values);
 
     if (!parsedValues.success) {
@@ -401,6 +452,24 @@ export const creditCardsService = {
     }
 
     try {
+      if (payload.installmentPlanId) {
+        const { data, error } = await requireSupabaseClient().rpc(
+          'update_credit_card_installment_plan',
+          {
+            p_installment_plan_id: payload.installmentPlanId,
+            p_category_id: parsedValues.data.categoryId,
+            p_description: parsedValues.data.description,
+            p_notes: parsedValues.data.notes || null
+          }
+        );
+
+        if (error) {
+          return createCreditCardsErrorResult(error);
+        }
+
+        return { data, error: null };
+      }
+
       const { data, error } = await requireSupabaseClient().rpc('update_credit_card_purchase', {
         p_credit_card_transaction_id: payload.purchaseId,
         p_credit_card_id: parsedValues.data.creditCardId,
@@ -417,7 +486,7 @@ export const creditCardsService = {
 
       return { data, error: null };
     } catch (error) {
-      return createCreditCardsErrorResult<CreditCardTransactionRow>(error);
+      return createCreditCardsErrorResult(error);
     }
   },
 
@@ -439,6 +508,27 @@ export const creditCardsService = {
       return { data, error: null };
     } catch (error) {
       return createCreditCardsErrorResult<CreditCardTransactionRow>(error);
+    }
+  },
+
+  async cancelInstallmentPlan(
+    installmentPlanId: string
+  ): Promise<CreditCardMutationResult<CreditCardInstallmentPlanRow>> {
+    try {
+      const { data, error } = await requireSupabaseClient().rpc(
+        'cancel_credit_card_installment_plan',
+        {
+          p_installment_plan_id: installmentPlanId
+        }
+      );
+
+      if (error) {
+        return createCreditCardsErrorResult(error);
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      return createCreditCardsErrorResult(error);
     }
   },
 

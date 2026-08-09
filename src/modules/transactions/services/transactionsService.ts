@@ -67,6 +67,8 @@ export const transactionsService = {
     const to = from + limit - 1;
 
     try {
+      await requireSupabaseClient().rpc('generate_due_recurring_transactions');
+
       const { data, error } = await requireSupabaseClient()
         .from('transactions')
         .select(

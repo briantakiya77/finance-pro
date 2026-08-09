@@ -7,10 +7,12 @@ import { CreditCardPurchaseActionMenu } from '@/modules/credit-cards/components/
 import { CreditCardPurchaseModal } from '@/modules/credit-cards/components/CreditCardPurchaseModal';
 import { CreditCardSummaryCard } from '@/modules/credit-cards/components/CreditCardSummaryCard';
 import {
+  CancelInstallmentPlanDialog,
   DeleteCreditCardDialog,
   DeleteCreditCardPurchaseDialog
 } from '@/modules/credit-cards/components/DeleteCreditCardDialog';
 import {
+  useCancelCreditCardInstallmentPlanMutation,
   useCreateCreditCardMutation,
   useCreateCreditCardPurchaseMutation,
   useCreditCardDetailsQuery,
@@ -80,6 +82,8 @@ export default function CreditCardsPage() {
   );
   const [purchasePendingDelete, setPurchasePendingDelete] =
     useState<CreditCardPurchaseWithRelations | null>(null);
+  const [installmentPlanPendingCancel, setInstallmentPlanPendingCancel] =
+    useState<CreditCardPurchaseWithRelations | null>(null);
   const [paymentInvoice, setPaymentInvoice] = useState<CreditCardInvoiceDetail | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
@@ -90,6 +94,7 @@ export default function CreditCardsPage() {
   const createPurchaseMutation = useCreateCreditCardPurchaseMutation();
   const updatePurchaseMutation = useUpdateCreditCardPurchaseMutation();
   const deletePurchaseMutation = useDeleteCreditCardPurchaseMutation();
+  const cancelInstallmentPlanMutation = useCancelCreditCardInstallmentPlanMutation();
   const payInvoiceMutation = usePayCreditCardInvoiceMutation();
 
   const cards = useMemo(() => creditCardsQuery.data ?? [], [creditCardsQuery.data]);
@@ -172,7 +177,11 @@ export default function CreditCardsPage() {
         clientMutationId: createClientMutationId(),
         values
       });
-      setFeedbackMessage('Compra registrada com sucesso.');
+      setFeedbackMessage(
+        values.purchaseMode === 'installment'
+          ? 'Parcelamento criado com sucesso.'
+          : 'Compra registrada com sucesso.'
+      );
       setIsPurchaseModalOpen(false);
     } catch (error) {
       setFeedbackMessage(getFriendlyErrorMessage(error));
@@ -187,9 +196,14 @@ export default function CreditCardsPage() {
     try {
       await updatePurchaseMutation.mutateAsync({
         purchaseId: editingPurchase.id,
+        installmentPlanId: editingPurchase.installment_plan_id,
         values
       });
-      setFeedbackMessage('Compra atualizada com sucesso.');
+      setFeedbackMessage(
+        editingPurchase.installment_plan_id
+          ? 'Parcelamento atualizado com sucesso.'
+          : 'Compra atualizada com sucesso.'
+      );
       setEditingPurchase(null);
     } catch (error) {
       setFeedbackMessage(getFriendlyErrorMessage(error));
@@ -205,6 +219,22 @@ export default function CreditCardsPage() {
       await deletePurchaseMutation.mutateAsync(purchasePendingDelete.id);
       setFeedbackMessage('Compra excluida e valor revertido da fatura.');
       setPurchasePendingDelete(null);
+    } catch (error) {
+      setFeedbackMessage(getFriendlyErrorMessage(error));
+    }
+  }
+
+  async function handleCancelInstallmentPlan() {
+    if (!installmentPlanPendingCancel?.installment_plan_id) {
+      return;
+    }
+
+    try {
+      await cancelInstallmentPlanMutation.mutateAsync(
+        installmentPlanPendingCancel.installment_plan_id
+      );
+      setFeedbackMessage('Parcelamento cancelado com seguranca.');
+      setInstallmentPlanPendingCancel(null);
     } catch (error) {
       setFeedbackMessage(getFriendlyErrorMessage(error));
     }
@@ -248,7 +278,7 @@ export default function CreditCardsPage() {
         <PageHeader
           eyebrow="Credito"
           title="Cartoes de credito"
-          description="Acompanhe limite, faturas, compras e pagamentos sem duplicar despesas."
+          description="Acompanhe limite, parcelamentos, faturas, compras e pagamentos sem duplicar despesas."
           action={
             <Button
               type="button"
@@ -273,8 +303,8 @@ export default function CreditCardsPage() {
             </div>
             <p className="mt-5 text-lg font-semibold text-text-primary">Nenhum cartao cadastrado</p>
             <p className="mx-auto mt-3 max-w-xl text-body text-text-secondary">
-              Cadastre um cartao para controlar compras, faturas e limite disponivel em um unico
-              fluxo.
+              Cadastre um cartao para controlar compras, parcelamentos, faturas e limite
+              disponivel em um unico fluxo.
             </p>
             <Button className="mt-6" onClick={() => setIsCreateModalOpen(true)}>
               Novo Cartao
@@ -445,7 +475,7 @@ export default function CreditCardsPage() {
                           Compras da fatura
                         </h2>
                         <p className="mt-1 text-caption text-text-secondary">
-                          Despesas reconhecidas na data da compra.
+                          Parcelas seguem o fechamento real do cartao e preservam o limite total.
                         </p>
                       </div>
                     </div>
@@ -458,38 +488,62 @@ export default function CreditCardsPage() {
                               <TableHeaderCell>Descricao</TableHeaderCell>
                               <TableHeaderCell>Categoria</TableHeaderCell>
                               <TableHeaderCell>Data</TableHeaderCell>
+                              <TableHeaderCell>Tipo</TableHeaderCell>
                               <TableHeaderCell className="text-right">Valor</TableHeaderCell>
                               <TableHeaderCell className="w-12" />
                             </tr>
                           </TableHead>
                           <TableBody>
-                            {selectedInvoice.purchases.map((purchase) => (
-                              <tr key={purchase.id}>
-                                <TableCell>
-                                  <div>
-                                    <p className="font-medium">{purchase.description}</p>
-                                    {purchase.notes && (
-                                      <p className="mt-1 text-caption text-text-secondary">
-                                        {purchase.notes}
-                                      </p>
+                            {selectedInvoice.purchases.map((purchase) => {
+                              const isInstallment = Boolean(purchase.installment_plan_id);
+
+                              return (
+                                <tr key={purchase.id}>
+                                  <TableCell>
+                                    <div>
+                                      <p className="font-medium">{purchase.description}</p>
+                                      {purchase.notes && (
+                                        <p className="mt-1 text-caption text-text-secondary">
+                                          {purchase.notes}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    {purchase.categories?.name ?? 'Sem categoria'}
+                                  </TableCell>
+                                  <TableCell>{formatDate(purchase.purchase_date)}</TableCell>
+                                  <TableCell>
+                                    {isInstallment ? (
+                                      <Badge variant="accent">
+                                        {purchase.installment_number}/{purchase.installment_count}
+                                      </Badge>
+                                    ) : (
+                                      <Badge>Unica</Badge>
                                     )}
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  {purchase.categories?.name ?? 'Sem categoria'}
-                                </TableCell>
-                                <TableCell>{formatDate(purchase.purchase_date)}</TableCell>
-                                <TableCell className="text-right font-semibold text-expense">
-                                  {formatCurrency(purchase.amount)}
-                                </TableCell>
-                                <TableCell>
-                                  <CreditCardPurchaseActionMenu
-                                    onDelete={() => setPurchasePendingDelete(purchase)}
-                                    onEdit={() => setEditingPurchase(purchase)}
-                                  />
-                                </TableCell>
-                              </tr>
-                            ))}
+                                  </TableCell>
+                                  <TableCell className="text-right font-semibold text-expense">
+                                    {formatCurrency(purchase.amount)}
+                                  </TableCell>
+                                  <TableCell>
+                                    <CreditCardPurchaseActionMenu
+                                      deleteLabel={
+                                        isInstallment ? 'Cancelar parcelamento' : 'Excluir compra'
+                                      }
+                                      editLabel={
+                                        isInstallment ? 'Editar parcelamento' : 'Editar compra'
+                                      }
+                                      onDelete={() =>
+                                        isInstallment
+                                          ? setInstallmentPlanPendingCancel(purchase)
+                                          : setPurchasePendingDelete(purchase)
+                                      }
+                                      onEdit={() => setEditingPurchase(purchase)}
+                                    />
+                                  </TableCell>
+                                </tr>
+                              );
+                            })}
                           </TableBody>
                         </Table>
                       </TableContainer>
@@ -561,7 +615,11 @@ export default function CreditCardsPage() {
       {(isPurchaseModalOpen || editingPurchase) && (
         <CreditCardPurchaseModal
           cards={cards}
-          isSubmitting={createPurchaseMutation.isPending || updatePurchaseMutation.isPending}
+          isSubmitting={
+            createPurchaseMutation.isPending ||
+            updatePurchaseMutation.isPending ||
+            cancelInstallmentPlanMutation.isPending
+          }
           onClose={() => {
             setIsPurchaseModalOpen(false);
             setEditingPurchase(null);
@@ -596,6 +654,15 @@ export default function CreditCardsPage() {
           isDeleting={deletePurchaseMutation.isPending}
           onCancel={() => setPurchasePendingDelete(null)}
           onConfirm={handleDeletePurchase}
+        />
+      )}
+
+      {installmentPlanPendingCancel && (
+        <CancelInstallmentPlanDialog
+          description={installmentPlanPendingCancel.description}
+          isCancelling={cancelInstallmentPlanMutation.isPending}
+          onCancel={() => setInstallmentPlanPendingCancel(null)}
+          onConfirm={handleCancelInstallmentPlan}
         />
       )}
     </>

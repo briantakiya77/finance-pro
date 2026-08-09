@@ -1,4 +1,11 @@
-import { ChevronLeft, CreditCard, Landmark, LayoutDashboard, ReceiptText } from 'lucide-react';
+import {
+  ChevronLeft,
+  CreditCard,
+  Landmark,
+  LayoutDashboard,
+  ReceiptText,
+  Repeat
+} from 'lucide-react';
 import { NavLink } from 'react-router';
 
 import { BrandLogo } from '@/shared/components/brand/BrandLogo';
@@ -14,6 +21,7 @@ const navigationItems = [
   { label: 'Inicio', href: '/', icon: LayoutDashboard },
   { label: 'Contas', href: '/contas', icon: Landmark },
   { label: 'Cartoes', href: '/cartoes', icon: CreditCard },
+  { label: 'Recorrencias', href: '/recorrencias', icon: Repeat },
   { label: 'Lancamentos', href: '/lancamentos', icon: ReceiptText }
 ];
 
