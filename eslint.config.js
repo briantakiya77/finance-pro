@@ -7,7 +7,7 @@ import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'node_modules']
+    ignores: ['dist', 'dist-server', 'node_modules']
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -24,6 +24,13 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }]
+    }
+  },
+  {
+    files: ['server/**/*.ts'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: globals.node
     }
   },
   prettier

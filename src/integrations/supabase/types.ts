@@ -62,6 +62,83 @@ export type Database = {
           }
         ];
       };
+      ai_conversations: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string | null;
+          deleted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title?: string | null;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string | null;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'ai_conversations_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+      ai_messages: {
+        Row: {
+          id: string;
+          user_id: string;
+          conversation_id: string;
+          role: Database['public']['Enums']['ai_message_role'];
+          content: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          conversation_id: string;
+          role: Database['public']['Enums']['ai_message_role'];
+          content: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          conversation_id?: string;
+          role?: Database['public']['Enums']['ai_message_role'];
+          content?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'ai_messages_conversation_id_fkey';
+            columns: ['conversation_id'];
+            isOneToOne: false;
+            referencedRelation: 'ai_conversations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'ai_messages_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
       categories: {
         Row: {
           id: string;
@@ -1101,6 +1178,7 @@ export type Database = {
     };
     Enums: {
       account_type: 'corrente' | 'poupanca' | 'investimento' | 'carteira';
+      ai_message_role: 'user' | 'assistant';
       credit_card_installment_plan_status: 'active' | 'cancelled' | 'completed';
       credit_card_invoice_status: 'open' | 'closed' | 'paid';
       financial_entry_type: 'income' | 'expense';
