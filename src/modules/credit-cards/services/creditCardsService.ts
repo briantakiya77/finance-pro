@@ -11,6 +11,7 @@ import {
 } from '@/modules/credit-cards/services/creditCardBilling';
 import type {
   CreditCardFormValues,
+  CreditCardInsert,
   CreditCardInvoiceDetail,
   CreditCardInvoiceRow,
   CreditCardInstallmentPlanRow,
@@ -41,6 +42,8 @@ const creditCardsErrorMessages: Record<string, string> = {
     'A compra selecionada nao esta disponivel para sua sessao.',
   'new row violates row-level security policy for table "credit_cards"':
     'Sua sessao nao tem permissao para alterar este cartao.',
+  'null value in column "user_id" of relation "credit_cards" violates not-null constraint':
+    'Sua sessao expirou. Entre novamente para criar cartoes.',
   'installment count must be between 2 and 60': 'As parcelas devem ficar entre 2 e 60.',
   'installment purchases must be edited through installment plan metadata':
     'Edite parcelamentos apenas pela descricao, categoria e observacoes do plano.',
@@ -95,9 +98,11 @@ function mapCardFormValuesToInsert(
         dueDay: number;
         color: string;
         isActive: boolean;
-      }
-) {
+      },
+  userId: string
+): CreditCardInsert {
   return {
+    user_id: userId,
     name: values.name.trim(),
     bank: values.bank.trim(),
     brand: values.brand || null,
@@ -125,7 +130,33 @@ function mapCardFormValuesToUpdate(
         isActive: boolean;
       }
 ): CreditCardUpdate {
-  return mapCardFormValuesToInsert(values);
+  return {
+    name: values.name.trim(),
+    bank: values.bank.trim(),
+    brand: values.brand || null,
+    last_four: values.lastFour || null,
+    limit_amount: values.limitAmount,
+    closing_day: Number(values.closingDay),
+    due_day: Number(values.dueDay),
+    color: values.color,
+    is_active: values.isActive
+  };
+}
+
+async function getAuthenticatedUserId() {
+  const { data, error } = await requireSupabaseClient().auth.getSession();
+
+  if (error) {
+    throw error;
+  }
+
+  const userId = data.session?.user?.id;
+
+  if (!userId) {
+    throw new Error('Sua sessao expirou. Entre novamente para criar ou alterar cartoes.');
+  }
+
+  return userId;
 }
 
 async function fetchInvoicesByCardIds(cardIds: string[]) {
@@ -316,9 +347,10 @@ export const creditCardsService = {
     }
 
     try {
+      const userId = await getAuthenticatedUserId();
       const { data, error } = await requireSupabaseClient()
         .from('credit_cards')
-        .insert(mapCardFormValuesToInsert(parsedValues.data))
+        .insert(mapCardFormValuesToInsert(parsedValues.data, userId))
         .select(
           'id,user_id,name,bank,brand,last_four,limit_amount,closing_day,due_day,color,is_active,deleted_at,created_at,updated_at'
         )

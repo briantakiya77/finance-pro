@@ -60,6 +60,12 @@ function getFriendlyErrorMessage(error: unknown) {
   return 'Nao foi possivel carregar os cartoes de credito no momento.';
 }
 
+type FeedbackState = {
+  message: string;
+  title: string;
+  variant: 'danger' | 'success';
+};
+
 function createClientMutationId() {
   return crypto.randomUUID();
 }
@@ -85,7 +91,7 @@ export default function CreditCardsPage() {
   const [installmentPlanPendingCancel, setInstallmentPlanPendingCancel] =
     useState<CreditCardPurchaseWithRelations | null>(null);
   const [paymentInvoice, setPaymentInvoice] = useState<CreditCardInvoiceDetail | null>(null);
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackState | null>(null);
 
   const creditCardsQuery = useCreditCardsQuery();
   const createCardMutation = useCreateCreditCardMutation();
@@ -133,10 +139,18 @@ export default function CreditCardsPage() {
   async function handleCreateCard(values: CreditCardFormValues) {
     try {
       await createCardMutation.mutateAsync(values);
-      setFeedbackMessage('Cartao criado com sucesso.');
+      setFeedback({
+        message: 'Cartao criado com sucesso.',
+        title: 'Tudo certo',
+        variant: 'success'
+      });
       setIsCreateModalOpen(false);
     } catch (error) {
-      setFeedbackMessage(getFriendlyErrorMessage(error));
+      setFeedback({
+        message: getFriendlyErrorMessage(error),
+        title: 'Nao foi possivel criar o cartao.',
+        variant: 'danger'
+      });
     }
   }
 
@@ -150,10 +164,18 @@ export default function CreditCardsPage() {
         cardId: editingCard.id,
         values
       });
-      setFeedbackMessage('Cartao atualizado com sucesso.');
+      setFeedback({
+        message: 'Cartao atualizado com sucesso.',
+        title: 'Tudo certo',
+        variant: 'success'
+      });
       setEditingCard(null);
     } catch (error) {
-      setFeedbackMessage(getFriendlyErrorMessage(error));
+      setFeedback({
+        message: getFriendlyErrorMessage(error),
+        title: 'Nao foi possivel atualizar o cartao.',
+        variant: 'danger'
+      });
     }
   }
 
@@ -164,10 +186,18 @@ export default function CreditCardsPage() {
 
     try {
       await deleteCardMutation.mutateAsync(cardPendingDelete.id);
-      setFeedbackMessage('Cartao removido com exclusao logica.');
+      setFeedback({
+        message: 'Cartao removido com exclusao logica.',
+        title: 'Tudo certo',
+        variant: 'success'
+      });
       setCardPendingDelete(null);
     } catch (error) {
-      setFeedbackMessage(getFriendlyErrorMessage(error));
+      setFeedback({
+        message: getFriendlyErrorMessage(error),
+        title: 'Nao foi possivel remover o cartao.',
+        variant: 'danger'
+      });
     }
   }
 
@@ -177,14 +207,21 @@ export default function CreditCardsPage() {
         clientMutationId: createClientMutationId(),
         values
       });
-      setFeedbackMessage(
-        values.purchaseMode === 'installment'
-          ? 'Parcelamento criado com sucesso.'
-          : 'Compra registrada com sucesso.'
-      );
+      setFeedback({
+        message:
+          values.purchaseMode === 'installment'
+            ? 'Parcelamento criado com sucesso.'
+            : 'Compra registrada com sucesso.',
+        title: 'Tudo certo',
+        variant: 'success'
+      });
       setIsPurchaseModalOpen(false);
     } catch (error) {
-      setFeedbackMessage(getFriendlyErrorMessage(error));
+      setFeedback({
+        message: getFriendlyErrorMessage(error),
+        title: 'Nao foi possivel registrar a compra.',
+        variant: 'danger'
+      });
     }
   }
 
@@ -199,14 +236,20 @@ export default function CreditCardsPage() {
         installmentPlanId: editingPurchase.installment_plan_id,
         values
       });
-      setFeedbackMessage(
-        editingPurchase.installment_plan_id
+      setFeedback({
+        message: editingPurchase.installment_plan_id
           ? 'Parcelamento atualizado com sucesso.'
-          : 'Compra atualizada com sucesso.'
-      );
+          : 'Compra atualizada com sucesso.',
+        title: 'Tudo certo',
+        variant: 'success'
+      });
       setEditingPurchase(null);
     } catch (error) {
-      setFeedbackMessage(getFriendlyErrorMessage(error));
+      setFeedback({
+        message: getFriendlyErrorMessage(error),
+        title: 'Nao foi possivel atualizar a compra.',
+        variant: 'danger'
+      });
     }
   }
 
@@ -217,10 +260,18 @@ export default function CreditCardsPage() {
 
     try {
       await deletePurchaseMutation.mutateAsync(purchasePendingDelete.id);
-      setFeedbackMessage('Compra excluida e valor revertido da fatura.');
+      setFeedback({
+        message: 'Compra excluida e valor revertido da fatura.',
+        title: 'Tudo certo',
+        variant: 'success'
+      });
       setPurchasePendingDelete(null);
     } catch (error) {
-      setFeedbackMessage(getFriendlyErrorMessage(error));
+      setFeedback({
+        message: getFriendlyErrorMessage(error),
+        title: 'Nao foi possivel excluir a compra.',
+        variant: 'danger'
+      });
     }
   }
 
@@ -233,10 +284,18 @@ export default function CreditCardsPage() {
       await cancelInstallmentPlanMutation.mutateAsync(
         installmentPlanPendingCancel.installment_plan_id
       );
-      setFeedbackMessage('Parcelamento cancelado com seguranca.');
+      setFeedback({
+        message: 'Parcelamento cancelado com seguranca.',
+        title: 'Tudo certo',
+        variant: 'success'
+      });
       setInstallmentPlanPendingCancel(null);
     } catch (error) {
-      setFeedbackMessage(getFriendlyErrorMessage(error));
+      setFeedback({
+        message: getFriendlyErrorMessage(error),
+        title: 'Nao foi possivel cancelar o parcelamento.',
+        variant: 'danger'
+      });
     }
   }
 
@@ -251,10 +310,18 @@ export default function CreditCardsPage() {
         invoiceId: paymentInvoice.id,
         values
       });
-      setFeedbackMessage('Pagamento registrado com sucesso.');
+      setFeedback({
+        message: 'Pagamento registrado com sucesso.',
+        title: 'Tudo certo',
+        variant: 'success'
+      });
       setPaymentInvoice(null);
     } catch (error) {
-      setFeedbackMessage(getFriendlyErrorMessage(error));
+      setFeedback({
+        message: getFriendlyErrorMessage(error),
+        title: 'Nao foi possivel registrar o pagamento.',
+        variant: 'danger'
+      });
     }
   }
 
@@ -290,9 +357,9 @@ export default function CreditCardsPage() {
           }
         />
 
-        {feedbackMessage && (
-          <Toast variant="success" title="Tudo certo">
-            {feedbackMessage}
+        {feedback && (
+          <Toast variant={feedback.variant} title={feedback.title}>
+            {feedback.message}
           </Toast>
         )}
 
