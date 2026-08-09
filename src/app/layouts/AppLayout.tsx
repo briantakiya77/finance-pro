@@ -19,7 +19,7 @@ export function AppLayout() {
 
       <div
         className={cn(
-          'min-h-screen pb-24 transition-[padding] duration-slow ease-[var(--ease-premium)] xl:pb-0',
+          'min-h-screen pb-32 transition-[padding] duration-slow ease-[var(--ease-premium)] xl:pb-0',
           isSidebarCollapsed ? 'xl:pl-[5.25rem]' : 'xl:pl-64'
         )}
       >

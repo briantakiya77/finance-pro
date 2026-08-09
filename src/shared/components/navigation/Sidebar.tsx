@@ -1,10 +1,12 @@
 import {
+  CalendarRange,
   ChevronLeft,
   CreditCard,
   Landmark,
   LayoutDashboard,
   ReceiptText,
-  Repeat
+  Repeat,
+  Target
 } from 'lucide-react';
 import { NavLink } from 'react-router';
 
@@ -21,6 +23,8 @@ const navigationItems = [
   { label: 'Inicio', href: '/', icon: LayoutDashboard },
   { label: 'Contas', href: '/contas', icon: Landmark },
   { label: 'Cartoes', href: '/cartoes', icon: CreditCard },
+  { label: 'Planejamento', href: '/planejamento', icon: CalendarRange },
+  { label: 'Metas', href: '/metas', icon: Target },
   { label: 'Recorrencias', href: '/recorrencias', icon: Repeat },
   { label: 'Lancamentos', href: '/lancamentos', icon: ReceiptText }
 ];

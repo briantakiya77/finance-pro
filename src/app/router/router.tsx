@@ -14,6 +14,8 @@ import { RouteLoading } from '@/shared/components/ui/RouteLoading';
 const AccountsPage = lazy(() => import('@/modules/accounts/pages/AccountsPage'));
 const CreditCardsPage = lazy(() => import('@/modules/credit-cards/pages/CreditCardsPage'));
 const DashboardPage = lazy(() => import('@/modules/dashboard/pages/DashboardPage'));
+const GoalsPage = lazy(() => import('@/modules/goals/pages/GoalsPage'));
+const PlanningPage = lazy(() => import('@/modules/planning/pages/PlanningPage'));
 const RecurringPage = lazy(() => import('@/modules/recurring/pages/RecurringPage'));
 const TransactionsPage = lazy(() => import('@/modules/transactions/pages/TransactionsPage'));
 
@@ -84,6 +86,22 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<RouteLoading />}>
             <CreditCardsPage />
+          </Suspense>
+        )
+      },
+      {
+        path: 'planejamento',
+        element: (
+          <Suspense fallback={<RouteLoading />}>
+            <PlanningPage />
+          </Suspense>
+        )
+      },
+      {
+        path: 'metas',
+        element: (
+          <Suspense fallback={<RouteLoading />}>
+            <GoalsPage />
           </Suspense>
         )
       },

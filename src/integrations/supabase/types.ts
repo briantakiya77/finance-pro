@@ -449,6 +449,158 @@ export type Database = {
           }
         ];
       };
+      category_budgets: {
+        Row: {
+          id: string;
+          user_id: string;
+          monthly_plan_id: string;
+          category_id: string;
+          budget_amount: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          monthly_plan_id: string;
+          category_id: string;
+          budget_amount: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          monthly_plan_id?: string;
+          category_id?: string;
+          budget_amount?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'category_budgets_category_id_fkey';
+            columns: ['category_id'];
+            isOneToOne: false;
+            referencedRelation: 'categories';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'category_budgets_monthly_plan_id_fkey';
+            columns: ['monthly_plan_id'];
+            isOneToOne: false;
+            referencedRelation: 'monthly_plans';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'category_budgets_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+      financial_goals: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          target_amount: string;
+          current_amount: string;
+          target_date: string | null;
+          type: Database['public']['Enums']['financial_goal_type'];
+          status: Database['public']['Enums']['financial_goal_status'];
+          notes: string | null;
+          deleted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          name: string;
+          target_amount: string;
+          current_amount?: string;
+          target_date?: string | null;
+          type?: Database['public']['Enums']['financial_goal_type'];
+          status?: Database['public']['Enums']['financial_goal_status'];
+          notes?: string | null;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          target_amount?: string;
+          current_amount?: string;
+          target_date?: string | null;
+          type?: Database['public']['Enums']['financial_goal_type'];
+          status?: Database['public']['Enums']['financial_goal_status'];
+          notes?: string | null;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'financial_goals_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+      monthly_plans: {
+        Row: {
+          id: string;
+          user_id: string;
+          reference_month: string;
+          expected_income: string | null;
+          savings_target: string;
+          spending_limit: string | null;
+          notes: string | null;
+          deleted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          reference_month: string;
+          expected_income?: string | null;
+          savings_target?: string;
+          spending_limit?: string | null;
+          notes?: string | null;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          reference_month?: string;
+          expected_income?: string | null;
+          savings_target?: string;
+          spending_limit?: string | null;
+          notes?: string | null;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'monthly_plans_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
       recurring_transaction_occurrences: {
         Row: {
           id: string;
@@ -669,6 +821,12 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      cancel_financial_goal: {
+        Args: {
+          p_goal_id: string;
+        };
+        Returns: Database['public']['Tables']['financial_goals']['Row'];
+      };
       cancel_credit_card_installment_plan: {
         Args: {
           p_installment_plan_id: string;
@@ -706,6 +864,17 @@ export type Database = {
         };
         Returns: Database['public']['Tables']['credit_card_transactions']['Row'];
       };
+      create_financial_goal: {
+        Args: {
+          p_name: string;
+          p_target_amount: string;
+          p_current_amount: string;
+          p_target_date: string | null;
+          p_type: Database['public']['Enums']['financial_goal_type'];
+          p_notes: string | null;
+        };
+        Returns: Database['public']['Tables']['financial_goals']['Row'];
+      };
       create_recurring_transaction: {
         Args: {
           p_account_id: string;
@@ -740,6 +909,69 @@ export type Database = {
       generate_due_recurring_transactions: {
         Args: Record<PropertyKey, never>;
         Returns: number;
+      };
+      get_category_budget_progress: {
+        Args: {
+          p_reference_month: string;
+        };
+        Returns: {
+          budget_id: string;
+          monthly_plan_id: string;
+          category_id: string;
+          category_name: string;
+          category_icon: string;
+          category_color: string;
+          budget_amount: string;
+          spent_amount: string;
+          remaining_amount: string;
+          usage_percentage: string;
+          status: string;
+        }[];
+      };
+      get_financial_projection: {
+        Args: {
+          p_horizon_months?: number;
+        };
+        Returns: {
+          reference_month: string;
+          opening_balance: string;
+          projected_income: string;
+          projected_expense: string;
+          projected_invoice_payment: string;
+          closing_balance: string;
+        }[];
+      };
+      get_monthly_plan_overview: {
+        Args: {
+          p_reference_month: string;
+        };
+        Returns: {
+          monthly_plan_id: string | null;
+          reference_month: string;
+          expected_income: string | null;
+          savings_target: string;
+          spending_limit: string | null;
+          notes: string | null;
+          realized_income: string;
+          realized_expense: string;
+          realized_savings: string;
+          spending_remaining: string | null;
+          spending_usage_percentage: string | null;
+          savings_progress_percentage: string | null;
+        }[];
+      };
+      get_upcoming_commitments: {
+        Args: {
+          p_horizon_days?: number;
+        };
+        Returns: {
+          kind: string;
+          source_id: string;
+          due_date: string;
+          title: string;
+          amount: string;
+          detail: string;
+        }[];
       };
       pay_credit_card_invoice: {
         Args: {
@@ -786,6 +1018,25 @@ export type Database = {
         };
         Returns: Database['public']['Tables']['credit_card_transactions']['Row'];
       };
+      update_financial_goal: {
+        Args: {
+          p_goal_id: string;
+          p_name: string;
+          p_target_amount: string;
+          p_current_amount: string;
+          p_target_date: string | null;
+          p_type: Database['public']['Enums']['financial_goal_type'];
+          p_notes: string | null;
+        };
+        Returns: Database['public']['Tables']['financial_goals']['Row'];
+      };
+      update_goal_progress: {
+        Args: {
+          p_goal_id: string;
+          p_amount_delta: string;
+        };
+        Returns: Database['public']['Tables']['financial_goals']['Row'];
+      };
       update_credit_card_installment_plan: {
         Args: {
           p_installment_plan_id: string;
@@ -829,12 +1080,37 @@ export type Database = {
         };
         Returns: Database['public']['Tables']['transactions']['Row'];
       };
+      upsert_category_budget: {
+        Args: {
+          p_monthly_plan_id: string;
+          p_category_id: string;
+          p_budget_amount: string;
+        };
+        Returns: Database['public']['Tables']['category_budgets']['Row'];
+      };
+      upsert_monthly_plan: {
+        Args: {
+          p_reference_month: string;
+          p_expected_income: string | null;
+          p_savings_target: string;
+          p_spending_limit: string | null;
+          p_notes: string | null;
+        };
+        Returns: Database['public']['Tables']['monthly_plans']['Row'];
+      };
     };
     Enums: {
       account_type: 'corrente' | 'poupanca' | 'investimento' | 'carteira';
       credit_card_installment_plan_status: 'active' | 'cancelled' | 'completed';
       credit_card_invoice_status: 'open' | 'closed' | 'paid';
       financial_entry_type: 'income' | 'expense';
+      financial_goal_status: 'active' | 'completed' | 'cancelled';
+      financial_goal_type:
+        | 'emergency_fund'
+        | 'purchase'
+        | 'travel'
+        | 'education'
+        | 'other';
       recurring_transaction_frequency: 'monthly';
       recurring_transaction_status: 'active' | 'paused' | 'cancelled';
     };
