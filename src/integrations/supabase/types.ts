@@ -1130,6 +1130,7 @@ export type Database = {
           p_invoice_id: string;
           p_account_id: string;
           p_amount: string;
+          p_paid_at: string;
           p_client_mutation_id: string;
         };
         Returns: Database['public']['Tables']['credit_card_invoice_payments']['Row'];

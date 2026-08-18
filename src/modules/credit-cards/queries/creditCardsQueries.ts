@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { accountsQueryKey } from '@/modules/accounts/queries/accountsQueries';
-import { dashboardSummaryQueryKey } from '@/modules/dashboard/queries/dashboardQueries';
+import { dashboardQueryKey } from '@/modules/dashboard/queries/dashboardQueries';
 import { creditCardsService } from '@/modules/credit-cards/services/creditCardsService';
 import type {
   CreditCardFormValues,
@@ -50,7 +50,7 @@ function useInvalidateCreditCardData() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: creditCardsQueryKey }),
       queryClient.invalidateQueries({ queryKey: creditCardDetailsQueryKey }),
-      queryClient.invalidateQueries({ queryKey: dashboardSummaryQueryKey }),
+      queryClient.invalidateQueries({ queryKey: dashboardQueryKey }),
       queryClient.invalidateQueries({ queryKey: accountsQueryKey })
     ]);
   };

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { useAccountsQuery } from '@/modules/accounts/queries/accountsQueries';
@@ -9,8 +9,8 @@ import type {
   CreditCardInvoiceDetail,
   CreditCardPaymentFormValues
 } from '@/modules/credit-cards/types/creditCards';
-import { Button, FieldError, FieldLabel, Input, Modal, Select } from '@/shared/components/ui';
-import { formatCurrency } from '@/shared/utils/money';
+import { Button, FieldError, FieldLabel, Input, Modal, Select, Toast } from '@/shared/components/ui';
+import { formatCurrency, formatCurrencyInput } from '@/shared/utils/money';
 
 type CreditCardPaymentModalProps = {
   invoice: CreditCardInvoiceDetail;
@@ -22,7 +22,8 @@ type CreditCardPaymentModalProps = {
 function mapPaymentDefaults(invoice: CreditCardInvoiceDetail): CreditCardPaymentFormValues {
   return {
     accountId: '',
-    amount: getInvoiceOutstandingAmount(invoice)
+    amount: formatCurrencyInput(getInvoiceOutstandingAmount(invoice)),
+    paymentDate: new Date().toISOString().slice(0, 10)
   };
 }
 
@@ -32,6 +33,7 @@ export function CreditCardPaymentModal({
   onClose,
   onSubmit
 }: CreditCardPaymentModalProps) {
+  const [hasValidationFeedback, setHasValidationFeedback] = useState(false);
   const accountsQuery = useAccountsQuery();
   const {
     formState: { errors },
@@ -48,6 +50,11 @@ export function CreditCardPaymentModal({
   }, [invoice, reset]);
 
   const accounts = (accountsQuery.data ?? []).filter((account) => account.is_active);
+  const hasNoAccounts = accounts.length === 0;
+  const submitValidValues = (values: CreditCardPaymentFormValues) => {
+    setHasValidationFeedback(false);
+    onSubmit(values);
+  };
 
   return (
     <Modal
@@ -55,11 +62,26 @@ export function CreditCardPaymentModal({
       description={`Saldo restante da fatura: ${formatCurrency(getInvoiceOutstandingAmount(invoice))}`}
       onClose={onClose}
     >
-      <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+      <form
+        className="space-y-6"
+        onSubmit={handleSubmit(submitValidValues, () => setHasValidationFeedback(true))}
+      >
+        {hasValidationFeedback && (
+          <Toast variant="danger" title="Revise os campos">
+            Revise os dados do pagamento antes de continuar.
+          </Toast>
+        )}
+
+        {hasNoAccounts && !accountsQuery.isLoading && (
+          <Toast variant="danger" title="Nenhuma conta disponivel">
+            Cadastre ou reative uma conta antes de pagar a fatura.
+          </Toast>
+        )}
+
         <div className="grid gap-5 md:grid-cols-2">
           <FieldLabel className="space-y-2 md:col-span-2">
             <span>Conta de pagamento</span>
-            <Select {...register('accountId')} disabled={accountsQuery.isLoading}>
+            <Select {...register('accountId')} disabled={accountsQuery.isLoading || hasNoAccounts}>
               <option value="">Selecione</option>
               {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
@@ -72,8 +94,21 @@ export function CreditCardPaymentModal({
 
           <FieldLabel className="space-y-2 md:col-span-2">
             <span>Valor</span>
-            <Input {...register('amount')} inputMode="decimal" placeholder="0,00" />
+            <Input
+              {...register('amount')}
+              inputMode="decimal"
+              placeholder="R$ 0,00"
+              onBlur={(event) => {
+                event.target.value = formatCurrencyInput(event.target.value);
+              }}
+            />
             <FieldError>{errors.amount?.message}</FieldError>
+          </FieldLabel>
+
+          <FieldLabel className="space-y-2 md:col-span-2">
+            <span>Data do pagamento</span>
+            <Input {...register('paymentDate')} type="date" />
+            <FieldError>{errors.paymentDate?.message}</FieldError>
           </FieldLabel>
         </div>
 
@@ -86,7 +121,10 @@ export function CreditCardPaymentModal({
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            disabled={isSubmitting || accountsQuery.isLoading || hasNoAccounts}
+          >
             {isSubmitting ? 'Processando...' : 'Confirmar pagamento'}
           </Button>
         </div>

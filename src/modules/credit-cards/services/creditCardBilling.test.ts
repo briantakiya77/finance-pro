@@ -15,6 +15,10 @@ describe('creditCardBilling', () => {
     expect(getReferenceMonthFromPurchaseDate('2026-08-08', 10)).toBe('2026-08-01');
   });
 
+  it('mantem compra no proprio ciclo quando ocorre exatamente no dia do fechamento', () => {
+    expect(getReferenceMonthFromPurchaseDate('2026-08-10', 10)).toBe('2026-08-01');
+  });
+
   it('coloca compra apos o fechamento na competencia seguinte', () => {
     expect(getReferenceMonthFromPurchaseDate('2026-08-12', 10)).toBe('2026-09-01');
   });
@@ -29,6 +33,14 @@ describe('creditCardBilling', () => {
 
   it('leva o vencimento para o proximo mes quando due day e menor ou igual ao fechamento', () => {
     expect(getDueDate('2026-08-01', 25, 10)).toBe('2026-09-10');
+  });
+
+  it('ajusta vencimento para o ultimo dia valido em fevereiro nao bissexto', () => {
+    expect(getDueDate('2027-02-01', 10, 31)).toBe('2027-02-28');
+  });
+
+  it('ajusta vencimento para o ultimo dia valido em fevereiro bissexto', () => {
+    expect(getDueDate('2028-02-01', 10, 30)).toBe('2028-02-29');
   });
 
   it('marca fatura como paga quando paid_amount cobre o total', () => {

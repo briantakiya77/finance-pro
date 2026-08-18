@@ -583,6 +583,7 @@ export const creditCardsService = {
         p_invoice_id: payload.invoiceId,
         p_account_id: parsedValues.data.accountId,
         p_amount: parsedValues.data.amount,
+        p_paid_at: parsedValues.data.paymentDate,
         p_client_mutation_id: payload.clientMutationId
       });
 

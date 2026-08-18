@@ -72,7 +72,7 @@ describe('dashboardService', () => {
     });
   });
 
-  it('busca apenas movimentacoes recentes reais sem incluir transferencias', async () => {
+  it('mescla caixa, compras no cartao e pagamentos de fatura sem incluir transferencias', async () => {
     const client = requireSupabaseClient() as unknown as {
       from: ReturnType<typeof vi.fn>;
     };
@@ -87,6 +87,7 @@ describe('dashboardService', () => {
               description: 'Salario',
               amount: '3000.00',
               transaction_date: '2026-08-18',
+              created_at: '2026-08-18T08:00:00.000Z',
               accounts: { id: 'acc-1', name: 'Conta principal', bank: 'Banco 1' },
               categories: {
                 id: 'cat-1',
@@ -101,15 +102,56 @@ describe('dashboardService', () => {
         });
       }
 
+      if (tableName === 'credit_card_transactions') {
+        return createResolvedQuery({
+          data: [
+            {
+              id: 'purchase-1',
+              description: 'Mercado',
+              amount: '300.00',
+              purchase_date: '2026-08-17',
+              credit_cards: { id: 'card-1', name: 'Nubank', bank: 'Nubank' },
+              installment_number: 2,
+              installment_count: 10
+            }
+          ],
+          error: null
+        });
+      }
+
+      if (tableName === 'credit_card_invoice_payments') {
+        return createResolvedQuery({
+          data: [
+            {
+              id: 'payment-1',
+              amount: '300.00',
+              paid_at: '2026-08-18T09:30:00.000Z',
+              accounts: { id: 'acc-1', name: 'Conta principal', bank: 'Banco 1' },
+              credit_card_invoices: {
+                id: 'invoice-1',
+                reference_month: '2026-08-01',
+                due_date: '2026-08-20',
+                credit_cards: { id: 'card-1', name: 'Nubank', bank: 'Nubank' }
+              }
+            }
+          ],
+          error: null
+        });
+      }
+
       throw new Error(`Tabela nao tratada no teste: ${tableName}`);
     });
 
     const result = await dashboardService.getRecentTransactions();
 
     expect(result.error).toBeNull();
-    expect(result.data).toHaveLength(1);
-    expect(result.data?.[0]?.description).toBe('Salario');
+    expect(result.data).toHaveLength(3);
+    expect(result.data?.[0]?.kind).toBe('credit-card-payment');
+    expect(result.data?.[1]?.kind).toBe('bank-transaction');
+    expect(result.data?.[2]?.kind).toBe('credit-card-purchase');
     expect(client.from).toHaveBeenCalledWith('transactions');
+    expect(client.from).toHaveBeenCalledWith('credit_card_transactions');
+    expect(client.from).toHaveBeenCalledWith('credit_card_invoice_payments');
     expect(client.from).not.toHaveBeenCalledWith('transfers');
   });
 });

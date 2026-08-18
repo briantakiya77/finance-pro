@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import {
   ArrowUpRight,
+  CreditCard,
   Landmark,
   ReceiptText,
   TrendingDown,
@@ -8,6 +9,11 @@ import {
   WalletCards
 } from 'lucide-react';
 
+import { useCreditCardsQuery } from '@/modules/credit-cards/queries/creditCardsQueries';
+import {
+  getInvoiceOutstandingAmount,
+  getInvoiceStatus
+} from '@/modules/credit-cards/services/creditCardBilling';
 import {
   useDashboardRecentTransactionsQuery,
   useDashboardSummaryQuery
@@ -26,6 +32,7 @@ const chartBars = [32, 46, 38, 58, 49, 72, 61, 80, 68, 86, 74, 92];
 export default function DashboardPage() {
   const summaryQuery = useDashboardSummaryQuery();
   const recentTransactionsQuery = useDashboardRecentTransactionsQuery();
+  const creditCardsQuery = useCreditCardsQuery();
   const currentReferenceMonth = getCurrentReferenceMonth();
   const planningSnapshotQuery = useDashboardPlanningSnapshotQuery(currentReferenceMonth, 3);
   const summary = summaryQuery.data;
@@ -35,6 +42,7 @@ export default function DashboardPage() {
   const categoryBudgets = planningSnapshot?.categoryBudgets ?? [];
   const projection = planningSnapshot?.projection ?? [];
   const commitments = planningSnapshot?.upcomingCommitments ?? [];
+  const creditCards = (creditCardsQuery.data ?? []).slice(0, 3);
   const topBudgetCategories = categoryBudgets.slice(0, 4);
   const donutTotalSpent = topBudgetCategories.reduce(
     (total, item) => total + Number(item.spent_amount),
@@ -66,9 +74,8 @@ export default function DashboardPage() {
   ] as const;
 
   function formatTransactionDate(date: string) {
-    return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(
-      new Date(`${date}T00:00:00Z`)
-    );
+    const normalizedDate = date.includes('T') ? new Date(date) : new Date(`${date}T00:00:00Z`);
+    return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(normalizedDate);
   }
 
   return (
@@ -402,58 +409,195 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <Card className="p-5 sm:p-6">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-heading font-semibold text-text-primary">Movimentacoes recentes</h2>
-            <p className="mt-1 text-caption text-text-secondary">
-              Ultimas receitas e despesas confirmadas no seu caixa.
-            </p>
+      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+        <Card className="p-5 sm:p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-heading font-semibold text-text-primary">Cartoes de credito</h2>
+              <p className="mt-1 text-caption text-text-secondary">
+                Limite utilizado, disponivel e proxima fatura sem duplicar despesas.
+              </p>
+            </div>
+            <Badge variant="accent">
+              <CreditCard size={14} />
+              {creditCards.length} ativos
+            </Badge>
           </div>
-          <Badge variant="accent">
-            <ReceiptText size={14} />
-            {recentTransactions.length} itens
-          </Badge>
-        </div>
 
-        <div className="mt-6 space-y-3">
-          {recentTransactionsQuery.isLoading ? (
-            <p className="text-sm text-text-secondary">Carregando movimentacoes...</p>
-          ) : recentTransactionsQuery.isError ? (
-            <p className="text-sm text-danger">Nao foi possivel carregar as movimentacoes recentes.</p>
-          ) : recentTransactions.length ? (
-            recentTransactions.map((transaction) => (
-              <div
-                key={transaction.id}
-                className="flex items-start justify-between gap-3 rounded-control border border-border bg-background/60 px-4 py-4"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-text-primary">{transaction.description}</p>
-                  <p className="mt-1 text-caption text-text-secondary">
-                    {transaction.categories?.name ?? 'Sem categoria'} •{' '}
-                    {transaction.accounts?.name ?? 'Conta indisponivel'} •{' '}
-                    {formatTransactionDate(transaction.transaction_date)}
-                  </p>
-                </div>
-                <span
-                  className={
-                    transaction.type === 'income'
-                      ? 'shrink-0 text-sm font-semibold text-income'
-                      : 'shrink-0 text-sm font-semibold text-expense'
-                  }
+          <div className="mt-6 space-y-3">
+            {creditCardsQuery.isLoading ? (
+              <p className="text-sm text-text-secondary">Carregando cartoes...</p>
+            ) : creditCards.length ? (
+              creditCards.map((card) => (
+                <div
+                  key={card.id}
+                  className="rounded-control border border-border bg-background/60 px-4 py-4"
                 >
-                  {transaction.type === 'income' ? '+' : '-'}
-                  {formatCurrency(transaction.amount)}
-                </span>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-text-secondary">
-              Nenhuma movimentacao recente encontrada para este usuario.
-            </p>
-          )}
-        </div>
-      </Card>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-text-primary">{card.name}</p>
+                      <p className="mt-1 text-caption text-text-secondary">
+                        {card.bank} • fecha dia {card.closing_day}
+                        {card.currentInvoice
+                          ? ` • vence ${formatTransactionDate(card.currentInvoice.due_date)}`
+                          : ''}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={
+                        card.currentInvoice && getInvoiceStatus(card.currentInvoice) === 'paid'
+                          ? 'success'
+                          : 'accent'
+                      }
+                    >
+                      {formatCurrency(card.availableLimit)} livre
+                    </Badge>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div>
+                      <p className="text-caption text-text-secondary">Limite total</p>
+                      <p className="mt-1 font-semibold text-text-primary">
+                        {formatCurrency(card.limit_amount)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-caption text-text-secondary">Utilizado</p>
+                      <p className="mt-1 font-semibold text-expense">
+                        {formatCurrency(card.utilizedAmount)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-caption text-text-secondary">Proxima fatura</p>
+                      <p className="mt-1 font-semibold text-text-primary">
+                        {formatCurrency(
+                          card.currentInvoice ? getInvoiceOutstandingAmount(card.currentInvoice) : '0.00'
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-text-secondary">
+                Nenhum cartao ativo encontrado no momento.
+              </p>
+            )}
+          </div>
+        </Card>
+
+        <Card className="p-5 sm:p-6" tone="secondary">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-heading font-semibold text-text-primary">Movimentacoes recentes</h2>
+              <p className="mt-1 text-caption text-text-secondary">
+                Caixa, compras no cartao e pagamentos de fatura em um unico feed.
+              </p>
+            </div>
+            <Badge variant="accent">
+              <ReceiptText size={14} />
+              {recentTransactions.length} itens
+            </Badge>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            {recentTransactionsQuery.isLoading ? (
+              <p className="text-sm text-text-secondary">Carregando movimentacoes...</p>
+            ) : recentTransactionsQuery.isError ? (
+              <p className="text-sm text-danger">Nao foi possivel carregar as movimentacoes recentes.</p>
+            ) : recentTransactions.length ? (
+              recentTransactions.map((item) => {
+                if (item.kind === 'bank-transaction') {
+                  const transaction = item.transaction;
+
+                  return (
+                    <div
+                      key={`bank-${transaction.id}`}
+                      className="flex items-start justify-between gap-3 rounded-control border border-border bg-background/60 px-4 py-4"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-text-primary">
+                          {transaction.description}
+                        </p>
+                        <p className="mt-1 text-caption text-text-secondary">
+                          {transaction.categories?.name ?? 'Sem categoria'} •{' '}
+                          {transaction.accounts?.name ?? 'Conta indisponivel'} •{' '}
+                          {formatTransactionDate(transaction.transaction_date)}
+                        </p>
+                      </div>
+                      <span
+                        className={
+                          transaction.type === 'income'
+                            ? 'shrink-0 text-sm font-semibold text-income'
+                            : 'shrink-0 text-sm font-semibold text-expense'
+                        }
+                      >
+                        {transaction.type === 'income' ? '+' : '-'}
+                        {formatCurrency(transaction.amount)}
+                      </span>
+                    </div>
+                  );
+                }
+
+                if (item.kind === 'credit-card-purchase') {
+                  const purchase = item.purchase;
+                  const installmentLabel =
+                    purchase.installment_number && purchase.installment_count
+                      ? ` • ${purchase.installment_number}/${purchase.installment_count}`
+                      : '';
+
+                  return (
+                    <div
+                      key={`card-purchase-${purchase.id}`}
+                      className="flex items-start justify-between gap-3 rounded-control border border-border bg-background/60 px-4 py-4"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-text-primary">
+                          {purchase.description}
+                        </p>
+                        <p className="mt-1 text-caption text-text-secondary">
+                          {purchase.credit_cards?.name ?? 'Cartao indisponivel'}
+                          {purchase.credit_cards?.bank ? ` • ${purchase.credit_cards.bank}` : ''}
+                          {installmentLabel} • {formatTransactionDate(purchase.purchase_date)}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-sm font-semibold text-expense">
+                        -{formatCurrency(purchase.amount)}
+                      </span>
+                    </div>
+                  );
+                }
+
+                const payment = item.payment;
+                return (
+                  <div
+                    key={`card-payment-${payment.id}`}
+                    className="flex items-start justify-between gap-3 rounded-control border border-border bg-background/60 px-4 py-4"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-text-primary">
+                        Pagamento de fatura
+                      </p>
+                      <p className="mt-1 text-caption text-text-secondary">
+                        {payment.credit_card_invoices?.credit_cards?.name ?? 'Cartao indisponivel'} •{' '}
+                        {payment.accounts?.name ?? 'Conta indisponivel'} •{' '}
+                        {formatTransactionDate(payment.paid_at)}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-sm font-semibold text-text-primary">
+                      {formatCurrency(payment.amount)}
+                    </span>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-sm text-text-secondary">
+                Nenhuma movimentacao recente encontrada para este usuario.
+              </p>
+            )}
+          </div>
+        </Card>
+      </div>
     </motion.section>
   );
 }

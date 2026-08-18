@@ -30,6 +30,13 @@ const transfersMigration = readFileSync(
   resolve(process.cwd(), 'supabase/migrations/20260818110000_create_transfers_core.sql'),
   'utf-8'
 );
+const creditCardPaymentDateMigration = readFileSync(
+  resolve(
+    process.cwd(),
+    'supabase/migrations/20260818123000_add_credit_card_payment_date_and_dashboard_feed_support.sql'
+  ),
+  'utf-8'
+);
 const dashboardService = readFileSync(
   resolve(process.cwd(), 'src/modules/dashboard/services/dashboardService.ts'),
   'utf-8'
@@ -92,8 +99,12 @@ describe('financial integration audit', () => {
     expect(dashboardService).toContain(".eq('type', 'income')");
     expect(dashboardService).toContain(".eq('type', 'expense')");
     expect(dashboardService).toContain(".from('credit_card_transactions')");
-    expect(dashboardService).not.toContain(".from('credit_card_invoice_payments')");
     expect(dashboardService).toContain('currentMonthExpense: addDecimalMoney(bankExpenseTotal, cardExpenseTotal)');
+  });
+
+  it('confirma que o feed recente distingue compras no cartao e pagamentos de fatura', () => {
+    expect(dashboardService).toContain(".from('credit_card_invoice_payments')");
+    expect(dashboardService).toContain("kind: 'credit-card-payment'");
   });
 
   it('garante que compra no cartao nao reduz saldo bancario e pagamento nao cria despesa duplicada', () => {
@@ -102,6 +113,8 @@ describe('financial integration audit', () => {
     );
     expect(creditCardsMigration).toContain('create or replace function public.pay_credit_card_invoice');
     expect(creditCardsMigration).toContain('set current_balance = current_balance - p_amount');
+    expect(creditCardPaymentDateMigration).toContain('p_paid_at date');
+    expect(creditCardPaymentDateMigration).toContain('paid_at =');
 
     const paymentSection = installmentsRecurringMigration.split(
       'create or replace function public.create_recurring_generated_transaction'
@@ -238,6 +251,9 @@ describe('financial integration audit', () => {
     expect(saldoFinal).toBe('0.00');
     expect(creditCardsMigration).toContain(
       "raise exception 'invoice payment exceeds outstanding amount'"
+    );
+    expect(creditCardPaymentDateMigration).toContain(
+      'grant execute on function public.pay_credit_card_invoice(uuid, uuid, numeric, date, uuid) to authenticated;'
     );
   });
 });

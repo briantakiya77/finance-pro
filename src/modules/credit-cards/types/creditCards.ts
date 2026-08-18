@@ -71,6 +71,7 @@ export type CreditCardPurchaseFormValues = {
 export type CreditCardPaymentFormValues = {
   accountId: string;
   amount: string;
+  paymentDate: string;
 };
 
 export type CreditCardMutationResult<T> = {

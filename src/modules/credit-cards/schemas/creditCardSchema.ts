@@ -87,5 +87,6 @@ export const creditCardPaymentSchema = z.object({
     .min(1, 'Informe o valor do pagamento.')
     .transform((value) => normalizeDecimalMoneyInput(value))
     .refine((value) => /^\d+(\.\d{2})$/.test(value), 'Informe um valor monetario valido.')
-    .refine((value) => value !== '0.00', 'O valor precisa ser maior que zero.')
+    .refine((value) => value !== '0.00', 'O valor precisa ser maior que zero.'),
+  paymentDate: z.string().min(1, 'Informe a data do pagamento.')
 });
