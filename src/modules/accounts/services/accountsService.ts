@@ -92,7 +92,9 @@ export const accountsService = {
     try {
       const { data, error } = await requireSupabaseClient()
         .from('accounts')
-        .select('*')
+        .select(
+          'id,user_id,name,bank,type,color,icon,initial_balance,current_balance,is_active,is_primary,deleted_at,created_at,updated_at'
+        )
         .is('deleted_at', null)
         .order('is_primary', { ascending: false })
         .order('updated_at', { ascending: false });

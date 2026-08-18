@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { accountsQueryKey } from '@/modules/accounts/queries/accountsQueries';
-import { dashboardSummaryQueryKey } from '@/modules/dashboard/queries/dashboardQueries';
+import { dashboardQueryKey } from '@/modules/dashboard/queries/dashboardQueries';
 import { transactionsService } from '@/modules/transactions/services/transactionsService';
 import type {
   TransactionCreatePayload,
@@ -33,7 +33,7 @@ function useInvalidateFinancialData() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: transactionsQueryKey }),
       queryClient.invalidateQueries({ queryKey: accountsQueryKey }),
-      queryClient.invalidateQueries({ queryKey: dashboardSummaryQueryKey })
+      queryClient.invalidateQueries({ queryKey: dashboardQueryKey })
     ]);
   };
 }

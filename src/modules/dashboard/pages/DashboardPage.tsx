@@ -2,12 +2,16 @@ import { motion } from 'framer-motion';
 import {
   ArrowUpRight,
   Landmark,
+  ReceiptText,
   TrendingDown,
   TrendingUp,
   WalletCards
 } from 'lucide-react';
 
-import { useDashboardSummaryQuery } from '@/modules/dashboard/queries/dashboardQueries';
+import {
+  useDashboardRecentTransactionsQuery,
+  useDashboardSummaryQuery
+} from '@/modules/dashboard/queries/dashboardQueries';
 import { useDashboardPlanningSnapshotQuery } from '@/modules/planning/queries/planningQueries';
 import {
   formatReferenceMonthLabel,
@@ -21,9 +25,11 @@ const chartBars = [32, 46, 38, 58, 49, 72, 61, 80, 68, 86, 74, 92];
 
 export default function DashboardPage() {
   const summaryQuery = useDashboardSummaryQuery();
+  const recentTransactionsQuery = useDashboardRecentTransactionsQuery();
   const currentReferenceMonth = getCurrentReferenceMonth();
   const planningSnapshotQuery = useDashboardPlanningSnapshotQuery(currentReferenceMonth, 3);
   const summary = summaryQuery.data;
+  const recentTransactions = recentTransactionsQuery.data ?? [];
   const planningSnapshot = planningSnapshotQuery.data;
   const monthlyPlan = planningSnapshot?.monthlyPlan ?? null;
   const categoryBudgets = planningSnapshot?.categoryBudgets ?? [];
@@ -58,6 +64,12 @@ export default function DashboardPage() {
       tone: 'accent'
     }
   ] as const;
+
+  function formatTransactionDate(date: string) {
+    return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(
+      new Date(`${date}T00:00:00Z`)
+    );
+  }
 
   return (
     <motion.section
@@ -389,6 +401,59 @@ export default function DashboardPage() {
           </div>
         </Card>
       </div>
+
+      <Card className="p-5 sm:p-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-heading font-semibold text-text-primary">Movimentacoes recentes</h2>
+            <p className="mt-1 text-caption text-text-secondary">
+              Ultimas receitas e despesas confirmadas no seu caixa.
+            </p>
+          </div>
+          <Badge variant="accent">
+            <ReceiptText size={14} />
+            {recentTransactions.length} itens
+          </Badge>
+        </div>
+
+        <div className="mt-6 space-y-3">
+          {recentTransactionsQuery.isLoading ? (
+            <p className="text-sm text-text-secondary">Carregando movimentacoes...</p>
+          ) : recentTransactionsQuery.isError ? (
+            <p className="text-sm text-danger">Nao foi possivel carregar as movimentacoes recentes.</p>
+          ) : recentTransactions.length ? (
+            recentTransactions.map((transaction) => (
+              <div
+                key={transaction.id}
+                className="flex items-start justify-between gap-3 rounded-control border border-border bg-background/60 px-4 py-4"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-text-primary">{transaction.description}</p>
+                  <p className="mt-1 text-caption text-text-secondary">
+                    {transaction.categories?.name ?? 'Sem categoria'} •{' '}
+                    {transaction.accounts?.name ?? 'Conta indisponivel'} •{' '}
+                    {formatTransactionDate(transaction.transaction_date)}
+                  </p>
+                </div>
+                <span
+                  className={
+                    transaction.type === 'income'
+                      ? 'shrink-0 text-sm font-semibold text-income'
+                      : 'shrink-0 text-sm font-semibold text-expense'
+                  }
+                >
+                  {transaction.type === 'income' ? '+' : '-'}
+                  {formatCurrency(transaction.amount)}
+                </span>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-text-secondary">
+              Nenhuma movimentacao recente encontrada para este usuario.
+            </p>
+          )}
+        </div>
+      </Card>
     </motion.section>
   );
 }

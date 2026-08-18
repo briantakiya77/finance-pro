@@ -1,6 +1,8 @@
 export function normalizeDecimalMoneyInput(value: string) {
   const trimmedValue = value.trim();
-  const withoutSpaces = trimmedValue.replace(/\s/g, '');
+  const withoutCurrency = trimmedValue.replace(/^R\$\s?/i, '');
+  const digitsAndSeparatorsOnly = withoutCurrency.replace(/[^\d,.-]/g, '');
+  const withoutSpaces = digitsAndSeparatorsOnly.replace(/\s/g, '');
   const normalizedSeparators =
     withoutSpaces.includes(',') && withoutSpaces.includes('.')
       ? withoutSpaces.replace(/\./g, '').replace(',', '.')
@@ -12,6 +14,16 @@ export function normalizeDecimalMoneyInput(value: string) {
 
   const [integerPart, decimalPart = ''] = normalizedSeparators.split('.');
   return `${integerPart}.${decimalPart.padEnd(2, '0')}`;
+}
+
+export function formatCurrencyInput(value: string) {
+  const normalizedValue = normalizeDecimalMoneyInput(value);
+
+  if (!/^\d+(\.\d{2})$/.test(normalizedValue)) {
+    return value;
+  }
+
+  return formatCurrency(normalizedValue);
 }
 
 export function formatCurrency(value: string | number) {

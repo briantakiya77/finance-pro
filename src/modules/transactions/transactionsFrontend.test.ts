@@ -15,7 +15,8 @@ const transactionFormModal = readFileSync(
 
 describe('transactions frontend safeguards', () => {
   it('bloqueia envio duplicado durante submit', () => {
-    expect(transactionFormModal).toContain('disabled={isSubmitting}');
+    expect(transactionFormModal).toContain('disabled={');
+    expect(transactionFormModal).toContain('isSubmitting ||');
     expect(transactionsPage).toContain('createTransactionMutation.isPending');
   });
 

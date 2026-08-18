@@ -1,4 +1,5 @@
 import { requireSupabaseClient } from '@/integrations/supabase';
+import type { TransactionWithRelations } from '@/modules/transactions/types/transactions';
 import { addDecimalMoney } from '@/shared/utils/money';
 
 export type DashboardSummary = {
@@ -10,6 +11,11 @@ export type DashboardSummary = {
 
 export type DashboardSummaryResult = {
   data: DashboardSummary | null;
+  error: string | null;
+};
+
+export type DashboardRecentTransactionsResult = {
+  data: TransactionWithRelations[] | null;
   error: string | null;
 };
 
@@ -107,6 +113,31 @@ export const dashboardService = {
           ),
           currentMonthExpense: addDecimalMoney(bankExpenseTotal, cardExpenseTotal)
         },
+        error: null
+      };
+    } catch (error) {
+      return { data: null, error: mapDashboardError(error) };
+    }
+  },
+
+  async getRecentTransactions(): Promise<DashboardRecentTransactionsResult> {
+    try {
+      const { data, error } = await requireSupabaseClient()
+        .from('transactions')
+        .select(
+          'id,user_id,account_id,category_id,type,description,amount,transaction_date,notes,client_mutation_id,deleted_at,created_at,updated_at,accounts(id,name,bank),categories(id,name,type,icon,color)'
+        )
+        .is('deleted_at', null)
+        .order('transaction_date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) {
+        return { data: null, error: mapDashboardError(error) };
+      }
+
+      return {
+        data: (data ?? []) as TransactionWithRelations[],
         error: null
       };
     } catch (error) {

@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useEffect, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 
 import { useAccountsQuery } from '@/modules/accounts/queries/accountsQueries';
 import { useCategoriesQuery } from '@/modules/categories/queries/categoriesQueries';
@@ -10,7 +10,16 @@ import type {
   TransactionFormValues,
   TransactionWithRelations
 } from '@/modules/transactions/types/transactions';
-import { Button, FieldError, FieldLabel, Input, Modal, Select } from '@/shared/components/ui';
+import {
+  Button,
+  FieldError,
+  FieldLabel,
+  Input,
+  Modal,
+  Select,
+  Toast
+} from '@/shared/components/ui';
+import { formatCurrencyInput } from '@/shared/utils/money';
 
 type TransactionFormModalProps = {
   isSubmitting: boolean;
@@ -28,7 +37,7 @@ function mapTransactionToFormValues(
 ): TransactionFormValues {
   return {
     accountId: transaction?.account_id ?? '',
-    amount: transaction?.amount ?? '',
+    amount: transaction ? formatCurrencyInput(transaction.amount) : '',
     categoryId: transaction?.category_id ?? '',
     description: transaction?.description ?? '',
     notes: transaction?.notes ?? '',
@@ -43,8 +52,10 @@ export function TransactionFormModal({
   onSubmit,
   transaction
 }: TransactionFormModalProps) {
+  const [hasValidationFeedback, setHasValidationFeedback] = useState(false);
   const accountsQuery = useAccountsQuery();
   const {
+    control,
     formState: { errors },
     handleSubmit,
     register,
@@ -60,9 +71,12 @@ export function TransactionFormModal({
   const categoriesQuery = useCategoriesQuery(selectedType);
   const accounts = accountsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
+  const hasNoAccounts = !accountsQuery.isLoading && accounts.length === 0;
+  const hasNoCategories = !categoriesQuery.isLoading && categories.length === 0;
 
   useEffect(() => {
     reset(mapTransactionToFormValues(transaction));
+    setHasValidationFeedback(false);
   }, [reset, transaction]);
 
   useEffect(() => {
@@ -71,13 +85,39 @@ export function TransactionFormModal({
     }
   }, [selectedType, setValue, transaction]);
 
+  function submitValidValues(values: TransactionFormValues) {
+    setHasValidationFeedback(false);
+    onSubmit(values);
+  }
+
   return (
     <Modal
       title={transaction ? 'Editar lancamento' : 'Novo lancamento'}
       description="Registre uma receita ou despesa real vinculada a uma conta."
       onClose={onClose}
     >
-      <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+      <form
+        className="space-y-6"
+        onSubmit={handleSubmit(submitValidValues, () => setHasValidationFeedback(true))}
+      >
+        {hasValidationFeedback && (
+          <Toast variant="danger" title="Revise os campos">
+            Corrija os dados destacados antes de salvar a movimentacao.
+          </Toast>
+        )}
+
+        {hasNoAccounts && (
+          <Toast variant="warning" title="Nenhuma conta ativa encontrada">
+            Cadastre uma conta ativa antes de registrar receitas ou despesas.
+          </Toast>
+        )}
+
+        {!hasNoAccounts && hasNoCategories && (
+          <Toast variant="warning" title="Nenhuma categoria compativel encontrada">
+            Crie ou reative uma categoria do tipo selecionado para continuar.
+          </Toast>
+        )}
+
         <div className="grid gap-5 md:grid-cols-2">
           <FieldLabel className="space-y-2">
             <span>Tipo</span>
@@ -93,7 +133,25 @@ export function TransactionFormModal({
 
           <FieldLabel className="space-y-2">
             <span>Valor</span>
-            <Input {...register('amount')} inputMode="decimal" placeholder="0,00" />
+            <Controller
+              control={control}
+              name="amount"
+              render={({ field }) => (
+                <Input
+                  ref={field.ref}
+                  name={field.name}
+                  value={field.value}
+                  inputMode="decimal"
+                  placeholder="R$ 0,00"
+                  onBlur={(event) => {
+                    field.onBlur();
+                    const formattedValue = formatCurrencyInput(event.target.value);
+                    setValue('amount', formattedValue, { shouldValidate: true });
+                  }}
+                  onChange={(event) => field.onChange(event.target.value)}
+                />
+              )}
+            />
             <FieldError>{errors.amount?.message}</FieldError>
           </FieldLabel>
 
@@ -105,7 +163,7 @@ export function TransactionFormModal({
 
           <FieldLabel className="space-y-2">
             <span>Conta</span>
-            <Select {...register('accountId')} disabled={accountsQuery.isLoading}>
+            <Select {...register('accountId')} disabled={accountsQuery.isLoading || hasNoAccounts}>
               <option value="">Selecione</option>
               {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
@@ -118,7 +176,10 @@ export function TransactionFormModal({
 
           <FieldLabel className="space-y-2">
             <span>Categoria</span>
-            <Select {...register('categoryId')} disabled={categoriesQuery.isLoading}>
+            <Select
+              {...register('categoryId')}
+              disabled={categoriesQuery.isLoading || hasNoAccounts || hasNoCategories}
+            >
               <option value="">Selecione</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
@@ -146,7 +207,16 @@ export function TransactionFormModal({
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            disabled={
+              isSubmitting ||
+              accountsQuery.isLoading ||
+              categoriesQuery.isLoading ||
+              hasNoAccounts ||
+              hasNoCategories
+            }
+          >
             {isSubmitting ? 'Salvando...' : transaction ? 'Salvar alteracoes' : 'Criar lancamento'}
           </Button>
         </div>
