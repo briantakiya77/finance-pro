@@ -1,5 +1,6 @@
 import { Bell, Search, Settings } from 'lucide-react';
 
+import { AuthProfileMenu } from '@/modules/auth/components/AuthProfileMenu';
 import { BrandLogo } from '@/shared/components/brand/BrandLogo';
 import { IconButton } from '@/shared/components/ui/IconButton';
 
@@ -28,17 +29,7 @@ export function Header() {
           <IconButton label="Pesquisar" icon={<Search size={18} />} className="sm:hidden" />
           <IconButton label="Notificacoes" icon={<Bell size={18} />} />
           <IconButton label="Configuracoes" icon={<Settings size={18} />} />
-          <button
-            type="button"
-            aria-label="Abrir perfil"
-            className="ml-1 flex h-10 items-center gap-3 rounded-control border border-border bg-surface px-1.5 pr-2.5 transition-all duration-normal hover:border-accent/35 hover:bg-surface-hover"
-          >
-            <BrandLogo variant="mark" theme="dark" size="sm" decorative />
-            <span className="hidden text-left lg:block">
-              <span className="block text-caption font-medium text-text-primary">Finance Pro</span>
-              <span className="block text-caption text-text-secondary">Perfil</span>
-            </span>
-          </button>
+          <AuthProfileMenu />
         </div>
       </div>
     </header>

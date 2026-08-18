@@ -10,6 +10,8 @@ describe('router', () => {
 
     render(<App />);
 
-    expect(await screen.findByText('Seu panorama financeiro em um unico lugar.')).toBeTruthy();
+    const links = await screen.findAllByRole('link', { name: 'Inicio' });
+
+    expect(links.some((link) => link.getAttribute('aria-current') === 'page')).toBe(true);
   });
 });

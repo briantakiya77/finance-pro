@@ -10,7 +10,7 @@ describe('App', () => {
 
     render(<App />);
 
-    expect(await screen.findByRole('heading', { name: 'Finance Pro' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Abrir perfil' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Notificacoes' })).toBeTruthy();
   });
 });

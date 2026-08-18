@@ -27,6 +27,7 @@ function buildAuthState(session: AuthSession | null, isInitializing: boolean): A
 export function AuthProvider({ children }: PropsWithChildren) {
   const [authState, setAuthState] = useState<AuthState>(initialAuthState);
   const isMountedRef = useRef(true);
+  const initializedUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -48,8 +49,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       setAuthState(buildAuthState(session, false));
 
-      if (session?.user) {
+      if (session?.user && initializedUserIdRef.current !== session.user.id) {
+        initializedUserIdRef.current = session.user.id;
         void categoriesService.ensureDefaultCategories();
+      }
+
+      if (!session?.user) {
+        initializedUserIdRef.current = null;
       }
     });
 
@@ -62,10 +68,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, []);
 
   useEffect(() => {
-    if (authState.isAuthenticated) {
+    if (authState.user && initializedUserIdRef.current !== authState.user.id) {
+      initializedUserIdRef.current = authState.user.id;
       void categoriesService.ensureDefaultCategories();
     }
-  }, [authState.isAuthenticated]);
+  }, [authState.user]);
 
   return (
     <AuthContext.Provider
