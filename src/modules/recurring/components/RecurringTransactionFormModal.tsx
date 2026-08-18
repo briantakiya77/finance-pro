@@ -1,16 +1,18 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { useAccountsQuery } from '@/modules/accounts/queries/accountsQueries';
 import { useCategoriesQuery } from '@/modules/categories/queries/categoriesQueries';
 import { financialEntryTypeOptions } from '@/modules/categories/types/categories';
 import { recurringTransactionSchema } from '@/modules/recurring/schemas/recurringSchema';
+import { recurringFrequencyOptions } from '@/modules/recurring/types/recurring';
 import type {
   RecurringTransactionFormValues,
   RecurringTransactionWithRelations
 } from '@/modules/recurring/types/recurring';
-import { Button, FieldError, FieldLabel, Input, Modal, Select } from '@/shared/components/ui';
+import { Button, FieldError, FieldLabel, Input, Modal, Select, Toast } from '@/shared/components/ui';
+import { formatCurrencyInput } from '@/shared/utils/money';
 
 type RecurringTransactionFormModalProps = {
   isSubmitting: boolean;
@@ -30,6 +32,7 @@ function mapRecurringTransactionToFormValues(
     accountId: recurringTransaction?.account_id ?? '',
     categoryId: recurringTransaction?.category_id ?? '',
     type: recurringTransaction?.type ?? 'expense',
+    frequency: recurringTransaction?.frequency ?? 'monthly',
     description: recurringTransaction?.description ?? '',
     amount: recurringTransaction?.amount ?? '',
     dayOfMonth: recurringTransaction?.day_of_month?.toString() ?? '',
@@ -45,12 +48,14 @@ export function RecurringTransactionFormModal({
   onSubmit,
   recurringTransaction
 }: RecurringTransactionFormModalProps) {
+  const [hasValidationFeedback, setHasValidationFeedback] = useState(false);
   const {
     control,
     formState: { errors },
     handleSubmit,
     register,
-    reset
+    reset,
+    setValue
   } = useForm<RecurringTransactionFormValues>({
     resolver: zodResolver(recurringTransactionSchema),
     defaultValues: mapRecurringTransactionToFormValues(recurringTransaction)
@@ -60,23 +65,74 @@ export function RecurringTransactionFormModal({
     control,
     name: 'type'
   });
+  const selectedFrequency = useWatch({
+    control,
+    name: 'frequency'
+  });
+  const selectedStartDate = useWatch({
+    control,
+    name: 'startDate'
+  });
   const accountsQuery = useAccountsQuery();
   const categoriesQuery = useCategoriesQuery(selectedType);
 
   useEffect(() => {
     reset(mapRecurringTransactionToFormValues(recurringTransaction));
+    setHasValidationFeedback(false);
   }, [recurringTransaction, reset]);
+
+  useEffect(() => {
+    if (selectedFrequency !== 'weekly' || !selectedStartDate) {
+      return;
+    }
+
+    setValue('dayOfMonth', selectedStartDate.slice(-2), { shouldValidate: false });
+  }, [selectedFrequency, selectedStartDate, setValue]);
 
   const accounts = accountsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
+  const hasNoAccounts = accounts.length === 0;
+  const hasNoCategories = categories.length === 0;
+  const submitValidValues = (values: RecurringTransactionFormValues) => {
+    setHasValidationFeedback(false);
+    onSubmit(values);
+  };
+  const isWeekly = selectedFrequency === 'weekly';
+  const frequencyDescription =
+    selectedFrequency === 'weekly'
+      ? 'Semanal no mesmo dia da semana da data inicial.'
+      : selectedFrequency === 'yearly'
+        ? 'Anual no mes da data inicial e com dia seguro em meses curtos.'
+        : 'Mensal com ajuste automatico para meses curtos.';
 
   return (
     <Modal
       title={recurringTransaction ? 'Editar recorrencia' : 'Nova recorrencia'}
-      description="Crie uma regra mensal que gera lancamentos reais somente quando a competencia vence."
+      description="Crie uma regra recorrente que so vira lancamento real quando a competencia vence."
       onClose={onClose}
     >
-      <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+      <form
+        className="space-y-6"
+        onSubmit={handleSubmit(submitValidValues, () => setHasValidationFeedback(true))}
+      >
+        {hasValidationFeedback && (
+          <Toast variant="danger" title="Revise os campos">
+            Revise os campos destacados antes de continuar.
+          </Toast>
+        )}
+
+        {hasNoAccounts && !accountsQuery.isLoading && (
+          <Toast variant="danger" title="Nenhuma conta disponivel">
+            Cadastre ou reative uma conta antes de criar uma recorrencia.
+          </Toast>
+        )}
+
+        {hasNoCategories && !categoriesQuery.isLoading && (
+          <Toast variant="danger" title="Nenhuma categoria compativel">
+            Nao existem categorias ativas para o tipo selecionado.
+          </Toast>
+        )}
+
         <div className="grid gap-5 md:grid-cols-2">
           <FieldLabel className="space-y-2">
             <span>Tipo</span>
@@ -91,9 +147,15 @@ export function RecurringTransactionFormModal({
           </FieldLabel>
 
           <FieldLabel className="space-y-2">
-            <span>Dia do mes</span>
-            <Input {...register('dayOfMonth')} inputMode="numeric" placeholder="10" />
-            <FieldError>{errors.dayOfMonth?.message}</FieldError>
+            <span>Frequencia</span>
+            <Select {...register('frequency')}>
+              {recurringFrequencyOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+            <FieldError>{errors.frequency?.message}</FieldError>
           </FieldLabel>
 
           <FieldLabel className="space-y-2 md:col-span-2">
@@ -104,13 +166,20 @@ export function RecurringTransactionFormModal({
 
           <FieldLabel className="space-y-2">
             <span>Valor</span>
-            <Input {...register('amount')} inputMode="decimal" placeholder="0,00" />
+            <Input
+              {...register('amount')}
+              inputMode="decimal"
+              placeholder="R$ 0,00"
+              onBlur={(event) => {
+                event.target.value = formatCurrencyInput(event.target.value);
+              }}
+            />
             <FieldError>{errors.amount?.message}</FieldError>
           </FieldLabel>
 
           <FieldLabel className="space-y-2">
             <span>Conta</span>
-            <Select {...register('accountId')} disabled={accountsQuery.isLoading}>
+            <Select {...register('accountId')} disabled={accountsQuery.isLoading || hasNoAccounts}>
               <option value="">Selecione</option>
               {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
@@ -123,7 +192,10 @@ export function RecurringTransactionFormModal({
 
           <FieldLabel className="space-y-2">
             <span>Categoria</span>
-            <Select {...register('categoryId')} disabled={categoriesQuery.isLoading}>
+            <Select
+              {...register('categoryId')}
+              disabled={categoriesQuery.isLoading || hasNoCategories}
+            >
               <option value="">Selecione</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
@@ -133,6 +205,14 @@ export function RecurringTransactionFormModal({
             </Select>
             <FieldError>{errors.categoryId?.message}</FieldError>
           </FieldLabel>
+
+          {!isWeekly && (
+            <FieldLabel className="space-y-2">
+              <span>{selectedFrequency === 'yearly' ? 'Dia de recorrencia' : 'Dia do mes'}</span>
+              <Input {...register('dayOfMonth')} inputMode="numeric" placeholder="10" />
+              <FieldError>{errors.dayOfMonth?.message}</FieldError>
+            </FieldLabel>
+          )}
 
           <FieldLabel className="space-y-2">
             <span>Data inicial</span>
@@ -153,11 +233,21 @@ export function RecurringTransactionFormModal({
           </FieldLabel>
         </div>
 
+        <div className="rounded-control border border-border bg-background/70 px-4 py-3 text-sm text-text-secondary">
+          {frequencyDescription}
+          {isWeekly ? ' O dia da semana e ancorado pela data inicial.' : ''}
+        </div>
+
         <div className="flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            disabled={
+              isSubmitting || accountsQuery.isLoading || categoriesQuery.isLoading || hasNoAccounts || hasNoCategories
+            }
+          >
             {isSubmitting
               ? 'Salvando...'
               : recurringTransaction

@@ -13,6 +13,7 @@ import {
 import { RecurringTransactionFormModal } from '@/modules/recurring/components/RecurringTransactionFormModal';
 import type {
   RecurringTransactionFormValues,
+  RecurringProjectionItem,
   RecurringTransactionWithRelations
 } from '@/modules/recurring/types/recurring';
 import {
@@ -51,6 +52,34 @@ function getStatusLabel(status: RecurringTransactionWithRelations['status']) {
   }
 
   return { label: 'Cancelada', variant: 'default' as const };
+}
+
+function getFrequencyLabel(frequency: RecurringTransactionWithRelations['frequency']) {
+  if (frequency === 'weekly') {
+    return 'Semanal';
+  }
+
+  if (frequency === 'yearly') {
+    return 'Anual';
+  }
+
+  return 'Mensal';
+}
+
+function getProjectionKindLabel(kind: RecurringProjectionItem['kind']) {
+  if (kind === 'installment') {
+    return 'Parcela';
+  }
+
+  if (kind === 'invoice') {
+    return 'Fatura';
+  }
+
+  if (kind === 'goal') {
+    return 'Meta';
+  }
+
+  return 'Recorrencia';
 }
 
 function formatDate(date: string) {
@@ -152,7 +181,7 @@ export default function RecurringPage() {
         <PageHeader
           eyebrow="Automacao financeira"
           title="Recorrencias"
-          description="Controle receitas e despesas mensais que geram lancamentos reais apenas na competencia correta."
+          description="Controle despesas fixas, receitas recorrentes e compromissos futuros sem duplicar lancamentos."
           action={
             <Button
               type="button"
@@ -198,9 +227,10 @@ export default function RecurringPage() {
                   <TableHead>
                     <tr>
                       <TableHeaderCell>Descricao</TableHeaderCell>
+                      <TableHeaderCell>Frequencia</TableHeaderCell>
                       <TableHeaderCell>Conta</TableHeaderCell>
                       <TableHeaderCell>Categoria</TableHeaderCell>
-                      <TableHeaderCell>Dia</TableHeaderCell>
+                      <TableHeaderCell>Regra</TableHeaderCell>
                       <TableHeaderCell>Status</TableHeaderCell>
                       <TableHeaderCell className="text-right">Valor</TableHeaderCell>
                       <TableHeaderCell className="w-12" />
@@ -220,6 +250,7 @@ export default function RecurringPage() {
                               </p>
                             </div>
                           </TableCell>
+                          <TableCell>{getFrequencyLabel(item.frequency)}</TableCell>
                           <TableCell>
                             <div>
                               <p>{item.accounts?.name ?? 'Conta removida'}</p>
@@ -229,7 +260,13 @@ export default function RecurringPage() {
                             </div>
                           </TableCell>
                           <TableCell>{item.categories?.name ?? 'Sem categoria'}</TableCell>
-                          <TableCell>Dia {item.day_of_month}</TableCell>
+                          <TableCell>
+                            {item.frequency === 'weekly'
+                              ? `Semana ancorada em ${formatDate(item.start_date)}`
+                              : item.frequency === 'yearly'
+                                ? `Todo ano no dia ${item.day_of_month}`
+                                : `Todo dia ${item.day_of_month}`}
+                          </TableCell>
                           <TableCell>
                             <Badge variant={status.variant}>{status.label}</Badge>
                           </TableCell>
@@ -309,9 +346,9 @@ export default function RecurringPage() {
           <Card className="p-5 sm:p-6" tone="secondary">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-heading font-semibold text-text-primary">Projecao basica</h2>
+                <h2 className="text-heading font-semibold text-text-primary">Proximos compromissos</h2>
                 <p className="mt-1 text-caption text-text-secondary">
-                  Proximas recorrencias e parcelas sem misturar com o saldo atual.
+                  Itens previstos sem materializar anos de transacoes futuras no banco.
                 </p>
               </div>
               <Badge>{projection.length} itens</Badge>
@@ -332,7 +369,7 @@ export default function RecurringPage() {
                       <div>
                         <p className="font-medium text-text-primary">{item.title}</p>
                         <p className="mt-1 text-caption text-text-secondary">
-                          {item.kind === 'recurring' ? 'Recorrencia' : 'Parcela'} • {item.detail}
+                          {getProjectionKindLabel(item.kind)} • {item.detail}
                         </p>
                       </div>
                       <p className="font-semibold text-text-primary">{formatCurrency(item.amount)}</p>

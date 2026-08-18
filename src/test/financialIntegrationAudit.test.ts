@@ -26,6 +26,13 @@ const installmentsRecurringMigration = readFileSync(
   resolve(process.cwd(), 'supabase/migrations/20260809113000_create_installments_and_recurring_core.sql'),
   'utf-8'
 );
+const recurringFrequencyExpansionMigration = readFileSync(
+  resolve(
+    process.cwd(),
+    'supabase/migrations/20260818150000_expand_recurring_frequencies_and_projection.sql'
+  ),
+  'utf-8'
+);
 const transfersMigration = readFileSync(
   resolve(process.cwd(), 'supabase/migrations/20260818110000_create_transfers_core.sql'),
   'utf-8'
@@ -144,6 +151,24 @@ describe('financial integration audit', () => {
     );
     expect(installmentsRecurringMigration).toContain(
       'set current_balance = current_balance + v_signed_amount'
+    );
+    expect(recurringFrequencyExpansionMigration).toContain(
+      'create or replace function public.compute_recurring_scheduled_date'
+    );
+  });
+
+  it('expande recorrencias para semanal, mensal e anual sem quebrar idempotencia', () => {
+    expect(recurringFrequencyExpansionMigration).toContain(
+      "alter type public.recurring_transaction_frequency add value if not exists 'weekly';"
+    );
+    expect(recurringFrequencyExpansionMigration).toContain(
+      "alter type public.recurring_transaction_frequency add value if not exists 'yearly';"
+    );
+    expect(installmentsRecurringMigration).toContain(
+      "public.uuid_from_text(p_recurring_transaction_id::text || ':' || p_reference_period::text)"
+    );
+    expect(recurringFrequencyExpansionMigration).toContain(
+      'on conflict (recurring_transaction_id, reference_period) do nothing'
     );
   });
 

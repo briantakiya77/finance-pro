@@ -23,14 +23,27 @@ export const recurringTransactionSchema = z
     accountId: z.string().uuid('Selecione uma conta.'),
     categoryId: z.string().uuid('Selecione uma categoria.'),
     type: z.enum(['income', 'expense']),
+    frequency: z.enum(['weekly', 'monthly', 'yearly']),
     description: z.string().trim().min(2, 'Informe a descricao.').max(160),
     amount: decimalMoneySchema,
-    dayOfMonth: dayOfMonthSchema,
+    dayOfMonth: z.string().trim().default(''),
     startDate: z.string().min(1, 'Informe a data inicial.'),
     endDate: z.string().default(''),
     notes: z.string().max(1000, 'As observacoes devem ter no maximo 1000 caracteres.').default('')
   })
   .superRefine((value, context) => {
+    if (value.frequency !== 'weekly') {
+      const parsedDay = dayOfMonthSchema.safeParse(value.dayOfMonth);
+
+      if (!parsedDay.success) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['dayOfMonth'],
+          message: parsedDay.error.issues[0]?.message ?? 'Informe o dia do mes.'
+        });
+      }
+    }
+
     if (!value.endDate) {
       return;
     }
@@ -42,4 +55,11 @@ export const recurringTransactionSchema = z
         message: 'A data final precisa ser igual ou posterior a inicial.'
       });
     }
-  });
+  })
+  .transform((value) => ({
+    ...value,
+    dayOfMonth:
+      value.frequency === 'weekly'
+        ? Number(value.startDate.slice(-2))
+        : Number(value.dayOfMonth)
+  }));

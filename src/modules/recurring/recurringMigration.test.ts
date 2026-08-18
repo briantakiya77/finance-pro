@@ -23,9 +23,9 @@ describe('recurring transactions migration', () => {
     expect(migration).toContain('add column recurrence_period date');
   });
 
-  it('mantem frequencia mensal extensivel sem ativar outros modos agora', () => {
+  it('mantem a base mensal e permite evolucao incremental de frequencias', () => {
     expect(migration).toContain("frequency public.recurring_transaction_frequency not null default 'monthly'");
-    expect(migration).toContain("where user_id = v_user_id\n      and status = 'active'\n      and frequency = 'monthly'");
+    expect(migration).toContain("where user_id = v_user_id\n      and status = 'active'");
   });
 
   it('nao altera saldo ao criar a definicao da recorrencia', () => {

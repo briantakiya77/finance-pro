@@ -15,6 +15,7 @@ export type RecurringTransactionFormValues = {
   accountId: string;
   categoryId: string;
   type: FinancialEntryType;
+  frequency: RecurringTransactionFrequency;
   description: string;
   amount: string;
   dayOfMonth: string;
@@ -38,10 +39,16 @@ export type RecurringOccurrenceWithRelations = RecurringTransactionOccurrenceRow
 };
 
 export type RecurringProjectionItem = {
-  kind: 'recurring' | 'installment';
+  kind: 'recurring' | 'installment' | 'invoice' | 'goal';
   id: string;
   title: string;
   amount: string;
   scheduledDate: string;
   detail: string;
 };
+
+export const recurringFrequencyOptions = [
+  { value: 'weekly', label: 'Semanal' },
+  { value: 'monthly', label: 'Mensal' },
+  { value: 'yearly', label: 'Anual' }
+] as const;

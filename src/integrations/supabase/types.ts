@@ -1023,6 +1023,7 @@ export type Database = {
           p_type: Database['public']['Enums']['financial_entry_type'];
           p_description: string;
           p_amount: string;
+          p_frequency: Database['public']['Enums']['recurring_transaction_frequency'];
           p_day_of_month: number;
           p_start_date: string;
           p_end_date: string | null;
@@ -1213,6 +1214,7 @@ export type Database = {
           p_type: Database['public']['Enums']['financial_entry_type'];
           p_description: string;
           p_amount: string;
+          p_frequency: Database['public']['Enums']['recurring_transaction_frequency'];
           p_day_of_month: number;
           p_start_date: string;
           p_end_date: string | null;
@@ -1282,7 +1284,7 @@ export type Database = {
         | 'travel'
         | 'education'
         | 'other';
-      recurring_transaction_frequency: 'monthly';
+      recurring_transaction_frequency: 'weekly' | 'monthly' | 'yearly';
       recurring_transaction_status: 'active' | 'paused' | 'cancelled';
     };
     CompositeTypes: Record<string, never>;

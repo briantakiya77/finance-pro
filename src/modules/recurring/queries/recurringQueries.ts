@@ -1,7 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { accountsQueryKey } from '@/modules/accounts/queries/accountsQueries';
-import { dashboardSummaryQueryKey } from '@/modules/dashboard/queries/dashboardQueries';
+import { dashboardQueryKey } from '@/modules/dashboard/queries/dashboardQueries';
+import {
+  financialProjectionQueryKey,
+  monthlyPlansQueryKey,
+  upcomingCommitmentsQueryKey
+} from '@/modules/planning/queries/planningQueries';
 import { recurringService } from '@/modules/recurring/services/recurringService';
 import type { RecurringTransactionFormValues } from '@/modules/recurring/types/recurring';
 import { transactionsQueryKey } from '@/modules/transactions/queries/transactionsQueries';
@@ -18,7 +23,10 @@ function useInvalidateRecurringData() {
       queryClient.invalidateQueries({ queryKey: recurringProjectionQueryKey }),
       queryClient.invalidateQueries({ queryKey: transactionsQueryKey }),
       queryClient.invalidateQueries({ queryKey: accountsQueryKey }),
-      queryClient.invalidateQueries({ queryKey: dashboardSummaryQueryKey })
+      queryClient.invalidateQueries({ queryKey: monthlyPlansQueryKey }),
+      queryClient.invalidateQueries({ queryKey: financialProjectionQueryKey }),
+      queryClient.invalidateQueries({ queryKey: upcomingCommitmentsQueryKey }),
+      queryClient.invalidateQueries({ queryKey: dashboardQueryKey })
     ]);
   };
 }

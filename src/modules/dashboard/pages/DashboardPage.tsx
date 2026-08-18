@@ -48,19 +48,34 @@ export default function DashboardPage() {
     (total, item) => total + Number(item.spent_amount),
     0
   );
-  const projectionHeadline = projection[0] ?? null;
+  const projectionHeadline =
+    projection.find((item) => item.reference_month === currentReferenceMonth) ?? projection[0] ?? null;
   const summaryCards = [
     {
       label: 'Receitas',
       value: formatCurrency(summary?.currentMonthIncome ?? '0.00'),
-      detail: 'Este mes',
+      detail: 'Realizadas no mes',
       icon: TrendingUp,
       tone: 'income'
     },
     {
       label: 'Despesas',
       value: formatCurrency(summary?.currentMonthExpense ?? '0.00'),
-      detail: 'Este mes',
+      detail: 'Realizadas no mes',
+      icon: TrendingDown,
+      tone: 'expense'
+    },
+    {
+      label: 'Receitas previstas',
+      value: formatCurrency(projectionHeadline?.projected_income ?? '0.00'),
+      detail: 'Ainda nao realizadas',
+      icon: TrendingUp,
+      tone: 'income'
+    },
+    {
+      label: 'Despesas previstas',
+      value: formatCurrency(projectionHeadline?.projected_expense ?? '0.00'),
+      detail: 'Ainda nao realizadas',
       icon: TrendingDown,
       tone: 'expense'
     },
@@ -164,7 +179,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {summaryCards.map((item, index) => {
           const Icon = item.icon;
 
