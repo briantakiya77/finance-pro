@@ -25,15 +25,26 @@ const config: ServerConfig = {
 const request: AIProviderRequest = {
   conversationHistory: [],
   context: {
-    accounts: {
-      count: 1,
-      totalBalance: '1000.00'
+    balances: {
+      projectedEndOfMonth: '1200.00',
+      safeToSpend: '900.00',
+      total: '1000.00'
     },
-    cards: [],
-    categoryBudgets: [],
+    budgets: [],
+    creditCards: {
+      availableLimit: '0.00',
+      nextInvoiceAmount: '0.00',
+      totalLimit: '0.00',
+      usedLimit: '0.00'
+    },
     goals: [],
+    month: {
+      expenseForecast: '0.00',
+      expenseRealized: '0.00',
+      incomeForecast: '0.00',
+      incomeRealized: '0.00'
+    },
     monthlyPlan: null,
-    projection3Months: [],
     referenceMonth: '2026-08-01',
     upcomingCommitments: []
   },
@@ -134,8 +145,9 @@ describe('AI provider diagnostics', () => {
   it('mantem erro 503 sanitizado para o frontend', () => {
     const server = readFileSync(resolve(process.cwd(), 'server/index.ts'), 'utf-8');
 
-    expect(server).toContain('statusCode === 503');
-    expect(server).toContain('Nao consegui acessar a assistente agora');
+    expect(server).toContain('AI_ASSISTANT_UNAVAILABLE');
+    expect(server).toContain('statusCode === 401');
+    expect(server).toContain("'Nao foi possivel concluir a analise agora.'");
     expect(server).not.toContain('body.error?.message');
   });
 });

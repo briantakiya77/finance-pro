@@ -4,8 +4,10 @@ export type ServerConfig = {
   aiProvider: 'gemini' | 'mock' | 'openai';
   aiRateLimitPerMinute: number;
   aiRequestTimeoutMs: number;
+  frontendUrl?: string;
   nodeEnv: string;
   port: number;
+  supabaseServiceRoleKey?: string;
   supabaseAnonKey: string;
   supabaseUrl: string;
 };
@@ -26,11 +28,13 @@ function getProvider(value: string | undefined): ServerConfig['aiProvider'] {
 }
 
 export function getServerConfig(): ServerConfig {
-  const supabaseUrl = process.env.VITE_SUPABASE_URL;
-  const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are required on the server.');
+    throw new Error(
+      'SUPABASE_URL/SUPABASE_ANON_KEY ou VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY sao obrigatorias no servidor.'
+    );
   }
 
   const aiProvider = getProvider(process.env.AI_PROVIDER);
@@ -43,8 +47,10 @@ export function getServerConfig(): ServerConfig {
     aiProvider,
     aiRateLimitPerMinute: getNumberEnv('AI_RATE_LIMIT_PER_MINUTE', 10),
     aiRequestTimeoutMs: getNumberEnv('AI_REQUEST_TIMEOUT_MS', 12000),
+    frontendUrl: process.env.FRONTEND_URL,
     nodeEnv: process.env.NODE_ENV ?? 'development',
     port: getNumberEnv('PORT', 3000),
+    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
     supabaseAnonKey,
     supabaseUrl
   };

@@ -91,7 +91,7 @@ export const assistantService = {
         throw sessionError ?? new Error('Sua sessao expirou. Entre novamente para usar a assistente.');
       }
 
-      const response = await fetch('/api/ai/chat', {
+      const response = await fetch('/api/ai/financial-assistant', {
         body: JSON.stringify(payload),
         headers: {
           Authorization: `Bearer ${sessionData.session.access_token}`,
@@ -100,10 +100,12 @@ export const assistantService = {
         method: 'POST'
       });
 
-      const body = (await response.json()) as AssistantChatResponse | { error?: string };
+      const body = (await response.json()) as
+        | AssistantChatResponse
+        | { error?: string; message?: string };
 
       if (!response.ok) {
-        throw new Error('error' in body ? body.error : defaultAssistantError);
+        throw new Error('message' in body ? body.message || defaultAssistantError : defaultAssistantError);
       }
 
       return {

@@ -33,6 +33,21 @@ function sendJson(response: ServerResponse, statusCode: number, payload: unknown
   response.end(JSON.stringify(payload));
 }
 
+function applyCors(request: IncomingMessage, response: ServerResponse) {
+  const origin = request.headers.origin;
+
+  if (!config.frontendUrl || !origin) {
+    return;
+  }
+
+  if (origin === config.frontendUrl) {
+    response.setHeader('Access-Control-Allow-Origin', origin);
+    response.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+    response.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    response.setHeader('Vary', 'Origin');
+  }
+}
+
 async function readJsonBody(request: IncomingMessage) {
   const chunks: Buffer[] = [];
   let totalBytes = 0;
@@ -57,7 +72,7 @@ function handleHealth(response: ServerResponse) {
   });
 }
 
-async function handleAIChat(request: IncomingMessage, response: ServerResponse) {
+async function handleFinancialAssistant(request: IncomingMessage, response: ServerResponse) {
   const requestId = randomUUID();
   const startedAt = Date.now();
 
@@ -79,7 +94,7 @@ async function handleAIChat(request: IncomingMessage, response: ServerResponse) 
         requestId,
         status: 'ok',
         tookMs: Date.now() - startedAt,
-        tool: result.response.type
+        tool: 'financial_assistant'
       })
     );
 
@@ -93,7 +108,9 @@ async function handleAIChat(request: IncomingMessage, response: ServerResponse) 
           ? 401
           : message === 'request not allowed'
             ? 400
-            : 503;
+            : message === 'message length invalid' || message === 'request body too large'
+              ? 400
+              : 503;
 
     console.error(
       JSON.stringify({
@@ -107,9 +124,21 @@ async function handleAIChat(request: IncomingMessage, response: ServerResponse) 
 
     sendJson(response, statusCode, {
       error:
-        statusCode === 503
-          ? 'Nao consegui acessar a assistente agora. Seus dados financeiros continuam seguros e o restante do Finance Pro esta disponivel.'
-          : message
+        statusCode === 401
+          ? 'UNAUTHENTICATED'
+          : statusCode === 429
+            ? 'AI_RATE_LIMIT'
+            : statusCode === 400
+              ? 'AI_REQUEST_INVALID'
+              : 'AI_ASSISTANT_UNAVAILABLE',
+      message:
+        statusCode === 401
+          ? 'Sua sessao nao e valida para consultar a assistente financeira.'
+          : statusCode === 429
+            ? 'Voce atingiu o limite temporario de consultas da assistente. Tente novamente em instantes.'
+            : statusCode === 400
+              ? 'Nao foi possivel processar a sua pergunta.'
+              : 'Nao foi possivel concluir a analise agora.'
     });
   }
 }
@@ -142,13 +171,24 @@ async function serveStatic(request: IncomingMessage, response: ServerResponse) {
 }
 
 const server = createServer(async (request, response) => {
-  if (request.method === 'GET' && request.url === '/api/health') {
+  applyCors(request, response);
+
+  if (request.method === 'OPTIONS') {
+    response.writeHead(204);
+    response.end();
+    return;
+  }
+
+  if (request.method === 'GET' && (request.url === '/api/health' || request.url === '/health')) {
     handleHealth(response);
     return;
   }
 
-  if (request.method === 'POST' && request.url === '/api/ai/chat') {
-    await handleAIChat(request, response);
+  if (
+    request.method === 'POST' &&
+    (request.url === '/api/ai/financial-assistant' || request.url === '/api/ai/chat')
+  ) {
+    await handleFinancialAssistant(request, response);
     return;
   }
 

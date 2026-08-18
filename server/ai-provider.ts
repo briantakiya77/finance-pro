@@ -1,8 +1,10 @@
 import type {
   AssistantConversationHistoryMessage,
   AssistantStructuredResponse,
+  FinancialAssistantStructuredData,
   PurchaseSimulation
 } from '../src/modules/ai/types/assistant.js';
+import { financialAssistantDataSchema } from './ai-schema.js';
 import type { ServerConfig } from './config.js';
 import { formatCurrency } from './money.js';
 import type { FinancialContext } from './financial-context.js';
@@ -146,61 +148,124 @@ function buildGroundedFallback(request: AIProviderRequest): AssistantStructuredR
     };
 
     return {
+      data: {
+        recommendation: request.simulation.simulationFeasible
+          ? 'A compra parece administravel apenas se continuar cabendo nos compromissos e no orcamento monitorado.'
+          : 'A compra merece cautela porque o impacto estimado supera a folga financeira atual.',
+        insights: request.simulation.reasons.slice(0, 3),
+        simulation: {
+          installmentAmount: request.simulation.cashflowImpact[0]?.amount,
+          installments: request.simulation.installments,
+          purchaseAmount: request.simulation.purchaseAmount,
+          safeToSpendAfter: request.simulation.planningImpact.remainingAfterPurchase ?? undefined,
+          safeToSpendBefore: request.context.monthlyPlan?.safe_to_spend ?? undefined
+        },
+        summary: `Pelos dados atuais, a simulacao ficou como ${scoreLabel[request.simulation.decisionScore]}.`,
+        warnings: request.simulation.simulationFeasible
+          ? []
+          : ['O impacto estimado ultrapassa a capacidade segura ou o limite analisado.']
+      },
       message: [
-        `Conclusao: pelos dados atuais, a simulacao ficou como ${scoreLabel[request.simulation.decisionScore]}.`,
-        `Impacto: ${request.simulation.installmentAmountLabel}.`,
-        `Motivo: ${request.simulation.reasons.join(' ')}`,
-        'A decisao final continua sendo sua; eu estou apenas organizando o impacto conhecido.'
+        `Resumo: pelos dados atuais, a simulacao ficou como ${scoreLabel[request.simulation.decisionScore]}.`,
+        `Recomendacao: ${
+          request.simulation.simulationFeasible
+            ? 'avance apenas se essa compra continuar confortavel frente aos compromissos do mes.'
+            : 'evite seguir agora sem ajustar fluxo, limite ou orcamento.'
+        }`,
+        request.simulation.reasons.join(' ')
       ].join('\n\n'),
       simulation: request.simulation,
-      type: 'purchase_simulation'
+      type: 'financial_assistant'
     };
   }
-
-  const monthlyPlan = request.context.monthlyPlan as
-    | {
-        realized_expense?: string;
-        realized_income?: string;
-        realized_savings?: string;
-        spending_limit?: string | null;
-      }
-    | null;
-
-  const summaryLines = [
-    `Saldo total atual: ${formatCurrency(request.context.accounts.totalBalance)}.`,
-    monthlyPlan
-      ? `Neste mes, receitas realizadas somam ${formatCurrency(monthlyPlan.realized_income)} e despesas realizadas somam ${formatCurrency(monthlyPlan.realized_expense)}.`
-      : 'Ainda nao encontrei planejamento mensal definido para esta competencia.',
-    monthlyPlan?.spending_limit
-      ? `Limite mensal planejado: ${formatCurrency(monthlyPlan.spending_limit)}.`
-      : 'Sem limite mensal planejado.',
-    request.context.upcomingCommitments.length
-      ? `Existem ${request.context.upcomingCommitments.length} compromissos proximos monitorados.`
-      : 'Nao encontrei compromissos proximos no horizonte consultado.'
-  ];
+  const monthlyPlan = request.context.monthlyPlan;
+  const warningItems =
+    request.context.budgets.filter((budget) => budget.status !== 'within_limit').length > 0
+      ? ['Ha categorias em alerta ou proximas de exceder o orcamento.']
+      : [];
 
   return {
-    message: summaryLines.join('\n\n'),
-    type: 'text'
+    data: {
+      recommendation: monthlyPlan?.safe_to_spend
+        ? 'Use a capacidade segura de gasto e os alertas de orcamento como referencia para suas decisoes deste mes.'
+        : 'Defina um planejamento mensal para melhorar a precisao das proximas analises.',
+      insights: [
+        `Saldo total atual em contas: ${formatCurrency(request.context.balances.total)}.`,
+        monthlyPlan
+          ? `Capacidade segura de gasto no mes: ${formatCurrency(monthlyPlan.safe_to_spend)}.`
+          : 'Ainda nao ha snapshot mensal consolidado para esta competencia.'
+      ],
+      summary: monthlyPlan
+        ? `Voce tem ${formatCurrency(monthlyPlan.safe_to_spend)} de capacidade segura de gasto e saldo projetado de ${formatCurrency(monthlyPlan.projected_month_end_balance)} ate o fim do mes.`
+        : 'Ainda nao encontrei um planejamento mensal consolidado para esta competencia.',
+      warnings: warningItems
+    },
+    message: monthlyPlan
+      ? `Resumo: voce tem ${formatCurrency(monthlyPlan.safe_to_spend)} de capacidade segura de gasto neste mes.\n\nRecomendacao: acompanhe as categorias em alerta antes de assumir novas despesas.\n\nInsight: saldo projetado no fim do mes em ${formatCurrency(monthlyPlan.projected_month_end_balance)}.`
+      : 'Ainda nao encontrei um snapshot mensal consolidado suficiente para uma analise mais precisa.',
+    type: 'financial_assistant'
   };
 }
 
-function buildProviderResponse(
-  message: string,
-  simulation: PurchaseSimulation | undefined
-): AssistantStructuredResponse {
-  if (simulation) {
-    return {
-      message,
-      simulation,
-      type: 'purchase_simulation'
-    };
+function normalizeAssistantMessage(data: FinancialAssistantStructuredData) {
+  const insights = data.insights.length ? `Insights: ${data.insights.join(' ')}` : '';
+  const warnings = data.warnings.length ? `Alertas: ${data.warnings.join(' ')}` : '';
+
+  return {
+    message: [data.summary, data.recommendation, insights, warnings].filter(Boolean).join('\n\n')
+  };
+}
+
+function withBackendGrounding(
+  data: FinancialAssistantStructuredData,
+  fallback: AssistantStructuredResponse
+): FinancialAssistantStructuredData {
+  if (!fallback.simulation) {
+    return data;
   }
 
   return {
-    message,
-    type: 'text'
+    ...data,
+    simulation: {
+      installmentAmount:
+        fallback.simulation.cashflowImpact[0]?.amount ?? data.simulation?.installmentAmount,
+      installments: fallback.simulation.installments,
+      purchaseAmount: fallback.simulation.purchaseAmount,
+      safeToSpendAfter:
+        fallback.simulation.planningImpact.safeToSpendAfterPurchase ?? data.simulation?.safeToSpendAfter,
+      safeToSpendBefore:
+        fallback.simulation.planningImpact.safeToSpendBeforePurchase ?? data.simulation?.safeToSpendBefore
+    }
   };
+}
+
+function coerceStructuredData(
+  rawText: string | undefined,
+  fallback: AssistantStructuredResponse
+): AssistantStructuredResponse {
+  if (!rawText) {
+    return fallback;
+  }
+
+  try {
+    const parsed = JSON.parse(rawText) as unknown;
+    const result = financialAssistantDataSchema.safeParse(parsed);
+
+    if (!result.success) {
+      return fallback;
+    }
+
+    const groundedData = withBackendGrounding(result.data, fallback);
+
+    return {
+      data: groundedData,
+      message: normalizeAssistantMessage(groundedData).message,
+      simulation: fallback.simulation,
+      type: 'financial_assistant'
+    };
+  } catch {
+    return fallback;
+  }
 }
 
 async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number) {
@@ -232,6 +297,7 @@ export class OpenAIProvider implements AIProvider {
     }
 
     const startedAt = Date.now();
+    const fallback = buildGroundedFallback(request);
 
     try {
       const response = await fetchWithTimeout(
@@ -282,7 +348,7 @@ export class OpenAIProvider implements AIProvider {
         output_text?: string;
       };
 
-      return buildProviderResponse(data.output_text || buildGroundedFallback(request).message, request.simulation);
+      return coerceStructuredData(data.output_text, fallback);
     } catch (error) {
       if (error instanceof AIProviderError) {
         throw error;
@@ -308,6 +374,7 @@ export class GeminiProvider implements AIProvider {
     }
 
     const startedAt = Date.now();
+    const fallback = buildGroundedFallback(request);
 
     try {
       const response = await fetchWithTimeout(
@@ -371,7 +438,7 @@ export class GeminiProvider implements AIProvider {
       };
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-      return buildProviderResponse(text || buildGroundedFallback(request).message, request.simulation);
+      return coerceStructuredData(text, fallback);
     } catch (error) {
       if (error instanceof AIProviderError) {
         throw error;

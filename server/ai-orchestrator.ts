@@ -6,13 +6,13 @@ import type {
   AssistantStoredMessage,
   PurchaseSimulationInput
 } from '../src/modules/ai/types/assistant.js';
+import { financialAssistantRequestSchema } from './ai-schema.js';
 import type { AIProvider } from './ai-provider.js';
 import { FinancialContextService, selectToolsForMessage } from './financial-context.js';
 import { parseSimulationInput, PurchaseSimulator } from './purchase-simulator.js';
 import { assistantSystemPrompt } from './system-prompt.js';
 import type { AuthenticatedRequestContext } from './supabase.js';
 
-const maxMessageLength = 1200;
 const maxRecentMessages = 8;
 const maxHistoryMessageLength = 1000;
 
@@ -164,11 +164,13 @@ export class AIOrchestrator {
   ) {}
 
   async handleChat(request: AssistantChatRequest): Promise<AssistantChatResponse> {
-    const message = request.message.trim();
+    const parsedRequest = financialAssistantRequestSchema.safeParse(request);
 
-    if (!message || message.length > maxMessageLength) {
+    if (!parsedRequest.success) {
       throw new Error('message length invalid');
     }
+
+    const message = parsedRequest.data.message;
 
     if (/sql|service_role|api key|jwt|todos os usu[aá]rios|ignore suas regras/i.test(message)) {
       throw new Error('request not allowed');
@@ -176,7 +178,7 @@ export class AIOrchestrator {
 
     const conversation = await ensureConversation(
       this.requestContext,
-      request.conversationId,
+      parsedRequest.data.conversationId,
       message
     );
     const conversationHistory = toConversationHistory(
@@ -185,10 +187,7 @@ export class AIOrchestrator {
 
     const tools = selectToolsForMessage(message);
     const simulationInput = resolveSimulationInput(message, conversationHistory);
-    const context = await new FinancialContextService(this.requestContext).buildContext(
-      tools,
-      Boolean(simulationInput && simulationInput.installments > 3)
-    );
+    const context = await new FinancialContextService(this.requestContext).buildContext(tools);
     const simulation = simulationInput
       ? await new PurchaseSimulator(this.requestContext).simulate(simulationInput)
       : undefined;
@@ -205,7 +204,7 @@ export class AIOrchestrator {
       this.requestContext,
       conversation.id,
       'assistant',
-      response.message
+      response.message.slice(0, 4000)
     );
 
     return {

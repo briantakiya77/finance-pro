@@ -183,6 +183,10 @@ export class PurchaseSimulator {
     const monthlySavingsAfterPurchase = monthlyPlan
       ? subtractMoney(monthlyPlan.realized_savings, card ? firstImpact : purchaseAmount)
       : null;
+    const safeToSpendBeforePurchase = monthlyPlan?.safe_to_spend ?? null;
+    const safeToSpendAfterPurchase = monthlyPlan
+      ? subtractMoney(monthlyPlan.safe_to_spend, card ? firstImpact : purchaseAmount)
+      : null;
 
     const cashflowImpact = installmentValues.map((amount, index) => {
       const referenceMonth = card
@@ -241,7 +245,9 @@ export class PurchaseSimulator {
       planningImpact: {
         monthlyLimit: monthlyPlan?.spending_limit ?? null,
         projectedSpentAfterPurchase,
-        remainingAfterPurchase
+        remainingAfterPurchase,
+        safeToSpendAfterPurchase,
+        safeToSpendBeforePurchase
       },
       projectedLowestBalance,
       purchaseAmount,

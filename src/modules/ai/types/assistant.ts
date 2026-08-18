@@ -55,6 +55,8 @@ export type PurchaseSimulation = {
     monthlyLimit: string | null;
     projectedSpentAfterPurchase: string | null;
     remainingAfterPurchase: string | null;
+    safeToSpendAfterPurchase: string | null;
+    safeToSpendBeforePurchase: string | null;
   };
   projectedLowestBalance: string | null;
   purchaseAmount: string;
@@ -62,16 +64,26 @@ export type PurchaseSimulation = {
   simulationFeasible: boolean;
 };
 
-export type AssistantStructuredResponse =
-  | {
-      message: string;
-      simulation?: PurchaseSimulation;
-      type: 'purchase_simulation';
-    }
-  | {
-      message: string;
-      type: 'text';
-    };
+export type FinancialAssistantStructuredData = {
+  recommendation: string;
+  simulation?: {
+    installments?: number;
+    installmentAmount?: string;
+    purchaseAmount?: string;
+    safeToSpendAfter?: string;
+    safeToSpendBefore?: string;
+  };
+  summary: string;
+  insights: string[];
+  warnings: string[];
+};
+
+export type AssistantStructuredResponse = {
+  data: FinancialAssistantStructuredData;
+  message: string;
+  simulation?: PurchaseSimulation;
+  type: 'financial_assistant';
+};
 
 export type AssistantChatRequest = {
   conversationId?: string | null;
@@ -86,9 +98,8 @@ export type AssistantChatResponse = {
 };
 
 export const assistantQuickSuggestions = [
-  'Quanto posso gastar este mes?',
-  'Como estao minhas financas?',
-  'Quais sao meus proximos compromissos?',
+  'Quanto ainda posso gastar este mes?',
+  'Onde estou gastando mais?',
   'Como estao minhas metas?',
-  'Posso fazer uma compra de R$ 3.000 em 10x?'
+  'Analise meu mes financeiro'
 ] as const;
