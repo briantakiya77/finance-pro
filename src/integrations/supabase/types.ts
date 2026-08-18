@@ -589,6 +589,7 @@ export type Database = {
           type: Database['public']['Enums']['financial_goal_type'];
           status: Database['public']['Enums']['financial_goal_status'];
           notes: string | null;
+          target_months: number | null;
           deleted_at: string | null;
           created_at: string;
           updated_at: string;
@@ -603,6 +604,7 @@ export type Database = {
           type?: Database['public']['Enums']['financial_goal_type'];
           status?: Database['public']['Enums']['financial_goal_status'];
           notes?: string | null;
+          target_months?: number | null;
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -617,6 +619,7 @@ export type Database = {
           type?: Database['public']['Enums']['financial_goal_type'];
           status?: Database['public']['Enums']['financial_goal_status'];
           notes?: string | null;
+          target_months?: number | null;
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -624,6 +627,64 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: 'financial_goals_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+      financial_goal_contributions: {
+        Row: {
+          id: string;
+          user_id: string;
+          goal_id: string;
+          account_id: string | null;
+          amount: string;
+          contribution_date: string;
+          description: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          goal_id: string;
+          account_id?: string | null;
+          amount: string;
+          contribution_date: string;
+          description?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          goal_id?: string;
+          account_id?: string | null;
+          amount?: string;
+          contribution_date?: string;
+          description?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'financial_goal_contributions_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'financial_goal_contributions_goal_id_fkey';
+            columns: ['goal_id'];
+            isOneToOne: false;
+            referencedRelation: 'financial_goals';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'financial_goal_contributions_user_id_fkey';
             columns: ['user_id'];
             isOneToOne: false;
             referencedRelation: 'users';
@@ -639,6 +700,7 @@ export type Database = {
           expected_income: string | null;
           savings_target: string;
           spending_limit: string | null;
+          minimum_reserve_amount: string;
           notes: string | null;
           deleted_at: string | null;
           created_at: string;
@@ -651,6 +713,7 @@ export type Database = {
           expected_income?: string | null;
           savings_target?: string;
           spending_limit?: string | null;
+          minimum_reserve_amount?: string;
           notes?: string | null;
           deleted_at?: string | null;
           created_at?: string;
@@ -663,6 +726,7 @@ export type Database = {
           expected_income?: string | null;
           savings_target?: string;
           spending_limit?: string | null;
+          minimum_reserve_amount?: string;
           notes?: string | null;
           deleted_at?: string | null;
           created_at?: string;
@@ -1013,8 +1077,19 @@ export type Database = {
           p_target_date: string | null;
           p_type: Database['public']['Enums']['financial_goal_type'];
           p_notes: string | null;
+          p_target_months?: number | null;
         };
         Returns: Database['public']['Tables']['financial_goals']['Row'];
+      };
+      create_goal_contribution: {
+        Args: {
+          p_goal_id: string;
+          p_amount: string;
+          p_contribution_date: string;
+          p_description: string | null;
+          p_account_id?: string | null;
+        };
+        Returns: Database['public']['Tables']['financial_goal_contributions']['Row'];
       };
       create_recurring_transaction: {
         Args: {
@@ -1079,6 +1154,12 @@ export type Database = {
           remaining_amount: string;
           usage_percentage: string;
           status: string;
+          realized_amount: string;
+          forecast_amount: string;
+          projected_amount: string;
+          projected_remaining_amount: string;
+          projected_overage_amount: string;
+          projected_usage_percentage: string;
         }[];
       };
       get_financial_projection: {
@@ -1094,6 +1175,12 @@ export type Database = {
           closing_balance: string;
         }[];
       };
+      get_month_invoice_cash_obligation: {
+        Args: {
+          p_reference_month: string;
+        };
+        Returns: string;
+      };
       get_monthly_plan_overview: {
         Args: {
           p_reference_month: string;
@@ -1104,10 +1191,19 @@ export type Database = {
           expected_income: string | null;
           savings_target: string;
           spending_limit: string | null;
+          minimum_reserve_amount: string;
           notes: string | null;
           realized_income: string;
+          forecast_income: string;
           realized_expense: string;
+          forecast_expense: string;
+          invoice_cash_obligation: string;
           realized_savings: string;
+          projected_income_total: string;
+          projected_expense_total: string;
+          projected_month_end_balance: string;
+          safe_to_spend: string;
+          monthly_budget_total: string;
           spending_remaining: string | null;
           spending_usage_percentage: string | null;
           savings_progress_percentage: string | null;
@@ -1124,6 +1220,20 @@ export type Database = {
           title: string;
           amount: string;
           detail: string;
+        }[];
+      };
+      list_goal_contributions: {
+        Args: {
+          p_goal_id: string;
+        };
+        Returns: {
+          id: string;
+          goal_id: string;
+          account_id: string | null;
+          amount: string;
+          contribution_date: string;
+          description: string | null;
+          created_at: string;
         }[];
       };
       pay_credit_card_invoice: {
@@ -1187,6 +1297,7 @@ export type Database = {
           p_target_date: string | null;
           p_type: Database['public']['Enums']['financial_goal_type'];
           p_notes: string | null;
+          p_target_months?: number | null;
         };
         Returns: Database['public']['Tables']['financial_goals']['Row'];
       };
@@ -1267,6 +1378,7 @@ export type Database = {
           p_savings_target: string;
           p_spending_limit: string | null;
           p_notes: string | null;
+          p_minimum_reserve_amount?: string;
         };
         Returns: Database['public']['Tables']['monthly_plans']['Row'];
       };
@@ -1279,7 +1391,9 @@ export type Database = {
       financial_entry_type: 'income' | 'expense';
       financial_goal_status: 'active' | 'completed' | 'cancelled';
       financial_goal_type:
+        | 'general'
         | 'emergency_fund'
+        | 'investment'
         | 'purchase'
         | 'travel'
         | 'education'

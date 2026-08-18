@@ -25,6 +25,8 @@ const planningErrorMessages: Record<string, string> = {
     'Meta de economia deve ser positiva com duas casas decimais.',
   'spending limit must be null or positive numeric(14,2)':
     'Limite de gasto deve ser vazio ou positivo com duas casas decimais.',
+  'minimum reserve amount must be positive numeric(14,2)':
+    'Reserva minima deve ser zero ou positiva com duas casas decimais.',
   'budget amount must be positive numeric(14,2)':
     'Cada orcamento por categoria deve ser zero ou positivo com duas casas decimais.'
 };
@@ -78,15 +80,35 @@ export function formatMonthInputValue(referenceMonth: string) {
 }
 
 export function getUsageTone(status: string) {
-  if (status === 'above_limit') {
+  if (status === 'exceeded') {
     return 'danger' as const;
   }
 
-  if (status === 'near_limit') {
+  if (status === 'critical') {
+    return 'danger' as const;
+  }
+
+  if (status === 'attention') {
     return 'warning' as const;
   }
 
   return 'success' as const;
+}
+
+export function getUsageLabel(status: string) {
+  if (status === 'exceeded') {
+    return 'Orcamento excedido';
+  }
+
+  if (status === 'critical') {
+    return 'Proximo do limite';
+  }
+
+  if (status === 'attention') {
+    return 'Atencao';
+  }
+
+  return 'Dentro do orcamento';
 }
 
 export function getProgressPercentage(currentAmount: string | number, targetAmount: string | number) {
@@ -247,6 +269,7 @@ export const planningService = {
         {
           p_reference_month: normalizeReferenceMonthInput(referenceMonth),
           p_expected_income: parsedValues.data.expectedIncome || null,
+          p_minimum_reserve_amount: parsedValues.data.minimumReserveAmount,
           p_notes: parsedValues.data.notes || null,
           p_savings_target: parsedValues.data.savingsTarget,
           p_spending_limit: parsedValues.data.spendingLimit || null
@@ -257,7 +280,7 @@ export const planningService = {
         return createPlanningErrorResult(planError);
       }
 
-      await Promise.all(
+      const budgetResponses = await Promise.all(
         parsedValues.data.categoryBudgets.map((budget) =>
           requireSupabaseClient().rpc('upsert_category_budget', {
             p_monthly_plan_id: plan.id,
@@ -266,6 +289,12 @@ export const planningService = {
           })
         )
       );
+
+      const budgetError = budgetResponses.find((response) => response.error)?.error;
+
+      if (budgetError) {
+        return createPlanningErrorResult(budgetError);
+      }
 
       const overviewResult = await this.getMonthlyPlanOverview(referenceMonth);
 

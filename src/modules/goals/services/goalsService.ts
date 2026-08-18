@@ -4,6 +4,7 @@ import {
   goalProgressSchema
 } from '@/modules/goals/schemas/goalsSchema';
 import type {
+  FinancialGoalContributionRow,
   FinancialGoalFormValues,
   FinancialGoalRow,
   GoalProgressFormValues,
@@ -21,7 +22,14 @@ const goalsErrorMessages: Record<string, string> = {
   'current amount must be positive numeric(14,2)':
     'O valor atual da meta deve ser positivo com duas casas decimais.',
   'goal progress delta must be positive numeric(14,2)':
-    'O progresso informado deve ser positivo com duas casas decimais.'
+    'O progresso informado deve ser positivo com duas casas decimais.',
+  'goal contribution amount must be positive numeric(14,2)':
+    'O aporte deve ser positivo com duas casas decimais.',
+  'goal target months must be 3, 6, 9 or 12':
+    'A recomendacao da reserva deve usar 3, 6, 9 ou 12 meses.',
+  'account not found for current user': 'A conta selecionada nao pertence a sua sessao.',
+  'cancelled financial goal cannot receive contributions':
+    'Nao e possivel registrar aportes em uma meta desativada.'
 };
 
 function mapGoalsError(error: unknown) {
@@ -84,6 +92,7 @@ export const goalsService = {
         p_notes: parsedValues.data.notes || null,
         p_target_amount: parsedValues.data.targetAmount,
         p_target_date: parsedValues.data.targetDate || null,
+        p_target_months: parsedValues.data.targetMonths ? Number(parsedValues.data.targetMonths) : null,
         p_type: parsedValues.data.type
       });
 
@@ -121,6 +130,7 @@ export const goalsService = {
         p_notes: parsedValues.data.notes || null,
         p_target_amount: parsedValues.data.targetAmount,
         p_target_date: parsedValues.data.targetDate || null,
+        p_target_months: parsedValues.data.targetMonths ? Number(parsedValues.data.targetMonths) : null,
         p_type: parsedValues.data.type
       });
 
@@ -137,10 +147,10 @@ export const goalsService = {
     }
   },
 
-  async updateGoalProgress(payload: {
+  async createGoalContribution(payload: {
     goalId: string;
     values: GoalProgressFormValues;
-  }): Promise<GoalsMutationResult<FinancialGoalRow>> {
+  }): Promise<GoalsMutationResult<FinancialGoalContributionRow>> {
     const parsedValues = goalProgressSchema.safeParse(payload.values);
 
     if (!parsedValues.success) {
@@ -151,8 +161,11 @@ export const goalsService = {
     }
 
     try {
-      const { data, error } = await requireSupabaseClient().rpc('update_goal_progress', {
-        p_amount_delta: parsedValues.data.amount,
+      const { data, error } = await requireSupabaseClient().rpc('create_goal_contribution', {
+        p_account_id: parsedValues.data.accountId || null,
+        p_amount: parsedValues.data.amount,
+        p_contribution_date: parsedValues.data.contributionDate,
+        p_description: parsedValues.data.description || null,
         p_goal_id: payload.goalId
       });
 
@@ -162,6 +175,27 @@ export const goalsService = {
 
       return {
         data,
+        error: null
+      };
+    } catch (error) {
+      return createGoalsErrorResult(error);
+    }
+  },
+
+  async listGoalContributions(
+    goalId: string
+  ): Promise<GoalsMutationResult<FinancialGoalContributionRow[]>> {
+    try {
+      const { data, error } = await requireSupabaseClient().rpc('list_goal_contributions', {
+        p_goal_id: goalId
+      });
+
+      if (error) {
+        return createGoalsErrorResult(error);
+      }
+
+      return {
+        data: (data ?? []) as FinancialGoalContributionRow[],
         error: null
       };
     } catch (error) {

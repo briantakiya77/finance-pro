@@ -33,6 +33,13 @@ const recurringFrequencyExpansionMigration = readFileSync(
   ),
   'utf-8'
 );
+const planningExpansionMigration = readFileSync(
+  resolve(
+    process.cwd(),
+    'supabase/migrations/20260818183000_expand_planning_budgets_goals.sql'
+  ),
+  'utf-8'
+);
 const transfersMigration = readFileSync(
   resolve(process.cwd(), 'supabase/migrations/20260818110000_create_transfers_core.sql'),
   'utf-8'
@@ -191,6 +198,10 @@ describe('financial integration audit', () => {
     expect(transfersMigration).toContain(
       'create policy "authenticated users can select own active transfers"'
     );
+    expect(planningExpansionMigration).toContain(
+      'create policy "authenticated users can select own goal contributions"'
+    );
+    expect(planningExpansionMigration).toContain('assert_goal_matches_user');
   });
 
   it('preserva idempotencia nas operacoes financeiras integradas', () => {
@@ -219,6 +230,16 @@ describe('financial integration audit', () => {
       '142.85',
       '142.85'
     ]);
+  });
+
+  it('garante planejamento mensal com previsto, reserva e metas sem dupla contagem do cartao', () => {
+    expect(planningExpansionMigration).toContain('create or replace function public.list_monthly_budget_events');
+    expect(planningExpansionMigration).toContain('create or replace function public.list_monthly_income_events');
+    expect(planningExpansionMigration).toContain('create or replace function public.get_month_invoice_cash_obligation');
+    expect(planningExpansionMigration).toContain('safe_to_spend');
+    expect(planningExpansionMigration).not.toMatch(
+      /list_monthly_budget_events[\s\S]*credit_card_invoice_payments/i
+    );
   });
 
   it('reproduz o cenario financeiro integrado principal com os valores finais esperados', () => {
@@ -280,5 +301,20 @@ describe('financial integration audit', () => {
     expect(creditCardPaymentDateMigration).toContain(
       'grant execute on function public.pay_credit_card_invoice(uuid, uuid, numeric, date, uuid) to authenticated;'
     );
+  });
+
+  it('mantem precisao financeira nos cenarios de orcamento e metas', () => {
+    const orcamento = '1000.00';
+    const realizado = '300.00';
+    const previsto = '120.00';
+    const disponivel = subtractDecimalMoney(orcamento, realizado);
+    const projecaoFinal = addDecimalMoney(realizado, previsto);
+    const faltamMeta = subtractDecimalMoney('10000.00', '2500.00');
+
+    expect(disponivel).toBe('700.00');
+    expect(projecaoFinal).toBe('420.00');
+    expect(faltamMeta).toBe('7500.00');
+    expect(addDecimalMoney('0.01', '10.99')).toBe('11.00');
+    expect(addDecimalMoney('999.99', '10000.01')).toBe('11000.00');
   });
 });

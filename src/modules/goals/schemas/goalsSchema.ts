@@ -22,9 +22,13 @@ export const financialGoalFormSchema = z.object({
   notes: z.string().trim().max(1000, 'Observacao pode ter no maximo 1000 caracteres.'),
   targetAmount: moneyField('Valor da meta'),
   targetDate: z.string().trim(),
-  type: z.enum(['emergency_fund', 'purchase', 'travel', 'education', 'other'])
+  targetMonths: z.enum(['', '3', '6', '9', '12']),
+  type: z.enum(['general', 'emergency_fund', 'purchase', 'investment'])
 });
 
 export const goalProgressSchema = z.object({
-  amount: moneyField('Valor de progresso')
+  accountId: z.string().trim(),
+  amount: moneyField('Valor do aporte'),
+  contributionDate: z.string().trim().min(1, 'Informe a data do aporte.'),
+  description: z.string().trim().max(240, 'Descricao pode ter no maximo 240 caracteres.')
 });

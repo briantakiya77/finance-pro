@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatMonthInputValue,
   getProgressPercentage,
+  getUsageLabel,
   getUsageTone,
   normalizeReferenceMonthInput
 } from '@/modules/planning/services/planningService';
@@ -20,8 +21,16 @@ describe('planningService helpers', () => {
 
   it('retorna tom visual coerente com o status do orcamento', () => {
     expect(getUsageTone('within_limit')).toBe('success');
-    expect(getUsageTone('near_limit')).toBe('warning');
-    expect(getUsageTone('above_limit')).toBe('danger');
+    expect(getUsageTone('attention')).toBe('warning');
+    expect(getUsageTone('critical')).toBe('danger');
+    expect(getUsageTone('exceeded')).toBe('danger');
+  });
+
+  it('explica o status visual do orcamento sem numeros magicos na ui', () => {
+    expect(getUsageLabel('within_limit')).toBe('Dentro do orcamento');
+    expect(getUsageLabel('attention')).toBe('Atencao');
+    expect(getUsageLabel('critical')).toBe('Proximo do limite');
+    expect(getUsageLabel('exceeded')).toBe('Orcamento excedido');
   });
 
   it('preserva o valor de input month no formato yyyy-mm', () => {

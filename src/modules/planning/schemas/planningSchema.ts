@@ -22,6 +22,7 @@ export const planningBudgetSchema = z.object({
 
 export const planningFormSchema = z.object({
   expectedIncome: moneyField('Receita esperada', { allowEmpty: true }),
+  minimumReserveAmount: moneyField('Reserva minima'),
   notes: z.string().trim().max(1000, 'Observacao pode ter no maximo 1000 caracteres.'),
   savingsTarget: moneyField('Meta de economia'),
   spendingLimit: moneyField('Limite de gastos', { allowEmpty: true }),

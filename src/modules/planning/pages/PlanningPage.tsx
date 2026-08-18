@@ -7,6 +7,7 @@ import {
   formatMonthInputValue,
   formatReferenceMonthLabel,
   getCurrentReferenceMonth,
+  getUsageLabel,
   getUsageTone
 } from '@/modules/planning/services/planningService';
 import type { PlanningFormValues } from '@/modules/planning/types/planning';
@@ -52,6 +53,7 @@ export default function PlanningPage() {
     () => (budgetsQuery.data ?? []).filter((budget) => Number(budget.budget_amount) > 0),
     [budgetsQuery.data]
   );
+  const categoriesWithoutBudget = Math.max(categories.length - categoryBudgets.length, 0);
   const referenceMonthLabel = formatReferenceMonthLabel(referenceMonth);
 
   async function handleSubmit(values: PlanningFormValues) {
@@ -140,36 +142,33 @@ export default function PlanningPage() {
             {monthlyPlan ? (
               <div className="mt-6 grid gap-4 md:grid-cols-3">
                 <div className="rounded-control border border-border bg-background/60 px-4 py-4">
-                  <p className="text-caption text-text-secondary">Limite mensal</p>
+                  <p className="text-caption text-text-secondary">Quanto ainda posso gastar</p>
                   <p className="mt-2 text-lg font-semibold text-text-primary">
-                    {monthlyPlan.spending_limit
-                      ? formatCurrency(monthlyPlan.spending_limit)
-                      : 'Nao definido'}
+                    {formatCurrency(monthlyPlan.safe_to_spend)}
                   </p>
                   <p className="mt-1 text-caption text-text-secondary">
-                    Gasto real: {formatCurrency(monthlyPlan.realized_expense)}
+                    Reserva protegida: {formatCurrency(monthlyPlan.minimum_reserve_amount)}
                   </p>
                 </div>
 
                 <div className="rounded-control border border-border bg-background/60 px-4 py-4">
-                  <p className="text-caption text-text-secondary">Meta de economia</p>
+                  <p className="text-caption text-text-secondary">Orcamento total do mes</p>
                   <p className="mt-2 text-lg font-semibold text-text-primary">
-                    {formatCurrency(monthlyPlan.savings_target)}
+                    {formatCurrency(monthlyPlan.monthly_budget_total)}
                   </p>
                   <p className="mt-1 text-caption text-text-secondary">
-                    Economia atual: {formatCurrency(monthlyPlan.realized_savings)}
+                    Realizado: {formatCurrency(monthlyPlan.realized_expense)} • Previsto:{' '}
+                    {formatCurrency(monthlyPlan.forecast_expense)}
                   </p>
                 </div>
 
                 <div className="rounded-control border border-border bg-background/60 px-4 py-4">
-                  <p className="text-caption text-text-secondary">Receita esperada</p>
+                  <p className="text-caption text-text-secondary">Saldo projetado no fim do mes</p>
                   <p className="mt-2 text-lg font-semibold text-text-primary">
-                    {monthlyPlan.expected_income
-                      ? formatCurrency(monthlyPlan.expected_income)
-                      : 'Nao definida'}
+                    {formatCurrency(monthlyPlan.projected_month_end_balance)}
                   </p>
                   <p className="mt-1 text-caption text-text-secondary">
-                    Receita real: {formatCurrency(monthlyPlan.realized_income)}
+                    Faturas ja comprometidas: {formatCurrency(monthlyPlan.invoice_cash_obligation)}
                   </p>
                 </div>
               </div>
@@ -199,15 +198,13 @@ export default function PlanningPage() {
             </p>
 
             <div className="mt-6 space-y-4">
-              <div className="rounded-control border border-border bg-background/60 px-4 py-4">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-caption text-text-secondary">Gasto / limite</span>
-                  <span className="text-sm font-medium text-text-primary">
-                    {monthlyPlan?.spending_limit
-                      ? `${formatCurrency(monthlyPlan.realized_expense)} / ${formatCurrency(monthlyPlan.spending_limit)}`
-                      : 'Sem limite definido'}
-                  </span>
-                </div>
+                <div className="rounded-control border border-border bg-background/60 px-4 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-caption text-text-secondary">Planejado / realizado / previsto</span>
+                    <span className="text-sm font-medium text-text-primary">
+                      {`${formatCurrency(monthlyPlan?.monthly_budget_total ?? '0.00')} / ${formatCurrency(monthlyPlan?.realized_expense ?? '0.00')} / ${formatCurrency(monthlyPlan?.forecast_expense ?? '0.00')}`}
+                    </span>
+                  </div>
                 <div className="mt-4 h-2 overflow-hidden rounded-full bg-background">
                   <div
                     className="h-full rounded-full bg-accent-gradient"
@@ -220,12 +217,29 @@ export default function PlanningPage() {
 
               <div className="rounded-control border border-border bg-background/60 px-4 py-4">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-caption text-text-secondary">Economia realizada</span>
+                  <span className="text-caption text-text-secondary">Receitas do periodo</span>
                   <span
                     className={`text-sm font-medium ${
-                      Number(monthlyPlan?.realized_savings ?? 0) >= 0
+                      Number(monthlyPlan?.projected_income_total ?? 0) >= Number(monthlyPlan?.projected_expense_total ?? 0)
                         ? 'text-income'
                         : 'text-danger'
+                    }`}
+                  >
+                    {formatCurrency(monthlyPlan?.projected_income_total ?? '0.00')}
+                  </span>
+                </div>
+                <p className="mt-2 text-caption text-text-secondary">
+                  Realizado: {formatCurrency(monthlyPlan?.realized_income ?? '0.00')} • Previsto:{' '}
+                  {formatCurrency(monthlyPlan?.forecast_income ?? '0.00')}
+                </p>
+              </div>
+
+              <div className="rounded-control border border-border bg-background/60 px-4 py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-caption text-text-secondary">Meta de economia</span>
+                  <span
+                    className={`text-sm font-medium ${
+                      Number(monthlyPlan?.realized_savings ?? 0) >= 0 ? 'text-income' : 'text-danger'
                     }`}
                   >
                     {formatCurrency(monthlyPlan?.realized_savings ?? '0.00')}
@@ -269,6 +283,11 @@ export default function PlanningPage() {
               <p className="mt-2 text-sm text-text-secondary">
                 Defina valores nas categorias de despesa para comparar planejado x realizado.
               </p>
+              {categoriesWithoutBudget ? (
+                <p className="mt-2 text-caption text-text-secondary">
+                  {categoriesWithoutBudget} categorias seguem ativas, mas sem orçamento definido.
+                </p>
+              ) : null}
             </div>
           ) : (
             <>
@@ -279,9 +298,10 @@ export default function PlanningPage() {
                       <tr>
                         <TableHeaderCell>Categoria</TableHeaderCell>
                         <TableHeaderCell>Orcado</TableHeaderCell>
-                        <TableHeaderCell>Gasto</TableHeaderCell>
-                        <TableHeaderCell>Restante</TableHeaderCell>
-                        <TableHeaderCell>%</TableHeaderCell>
+                        <TableHeaderCell>Realizado</TableHeaderCell>
+                        <TableHeaderCell>Previsto</TableHeaderCell>
+                        <TableHeaderCell>Projecao final</TableHeaderCell>
+                        <TableHeaderCell>Disponivel</TableHeaderCell>
                         <TableHeaderCell>Status</TableHeaderCell>
                       </tr>
                     </TableHead>
@@ -290,16 +310,13 @@ export default function PlanningPage() {
                         <tr key={budget.budget_id}>
                           <TableCell>{budget.category_name}</TableCell>
                           <TableCell>{formatCurrency(budget.budget_amount)}</TableCell>
-                          <TableCell>{formatCurrency(budget.spent_amount)}</TableCell>
+                          <TableCell>{formatCurrency(budget.realized_amount)}</TableCell>
+                          <TableCell>{formatCurrency(budget.forecast_amount)}</TableCell>
+                          <TableCell>{formatCurrency(budget.projected_amount)}</TableCell>
                           <TableCell>{formatCurrency(budget.remaining_amount)}</TableCell>
-                          <TableCell>{budget.usage_percentage}%</TableCell>
                           <TableCell>
                             <Badge variant={getUsageTone(budget.status)}>
-                              {budget.status === 'above_limit'
-                                ? 'Acima do limite'
-                                : budget.status === 'near_limit'
-                                  ? 'Proximo do limite'
-                                  : 'Dentro do planejado'}
+                              {getUsageLabel(budget.status)}
                             </Badge>
                           </TableCell>
                         </tr>
@@ -316,15 +333,17 @@ export default function PlanningPage() {
                       <div>
                         <p className="font-medium text-text-primary">{budget.category_name}</p>
                         <p className="mt-1 text-caption text-text-secondary">
-                          {formatCurrency(budget.spent_amount)} de {formatCurrency(budget.budget_amount)}
+                          {formatCurrency(budget.realized_amount)} realizado •{' '}
+                          {formatCurrency(budget.forecast_amount)} previsto
                         </p>
                       </div>
                       <Badge variant={getUsageTone(budget.status)}>
-                        {budget.usage_percentage}%
+                        {budget.projected_usage_percentage}%
                       </Badge>
                     </div>
                     <p className="mt-3 text-caption text-text-secondary">
-                      Restante: {formatCurrency(budget.remaining_amount)}
+                      Disponivel agora: {formatCurrency(budget.remaining_amount)} • Projecao:{' '}
+                      {formatCurrency(budget.projected_amount)}
                     </p>
                   </Card>
                 ))}

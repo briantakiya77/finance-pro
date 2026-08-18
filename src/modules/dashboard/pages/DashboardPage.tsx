@@ -18,10 +18,12 @@ import {
   useDashboardRecentTransactionsQuery,
   useDashboardSummaryQuery
 } from '@/modules/dashboard/queries/dashboardQueries';
+import { useFinancialGoalsQuery } from '@/modules/goals/queries/goalsQueries';
 import { useDashboardPlanningSnapshotQuery } from '@/modules/planning/queries/planningQueries';
 import {
   formatReferenceMonthLabel,
   getCurrentReferenceMonth,
+  getUsageLabel,
   getUsageTone
 } from '@/modules/planning/services/planningService';
 import { Badge, Card } from '@/shared/components/ui';
@@ -33,6 +35,7 @@ export default function DashboardPage() {
   const summaryQuery = useDashboardSummaryQuery();
   const recentTransactionsQuery = useDashboardRecentTransactionsQuery();
   const creditCardsQuery = useCreditCardsQuery();
+  const goalsQuery = useFinancialGoalsQuery();
   const currentReferenceMonth = getCurrentReferenceMonth();
   const planningSnapshotQuery = useDashboardPlanningSnapshotQuery(currentReferenceMonth, 3);
   const summary = summaryQuery.data;
@@ -50,6 +53,10 @@ export default function DashboardPage() {
   );
   const projectionHeadline =
     projection.find((item) => item.reference_month === currentReferenceMonth) ?? projection[0] ?? null;
+  const activeGoals = (goalsQuery.data ?? []).filter((goal) => goal.status !== 'cancelled');
+  const primaryGoal = activeGoals[0] ?? null;
+  const emergencyGoal =
+    activeGoals.find((goal) => goal.type === 'emergency_fund') ?? null;
   const summaryCards = [
     {
       label: 'Receitas',
@@ -74,7 +81,7 @@ export default function DashboardPage() {
     },
     {
       label: 'Despesas previstas',
-      value: formatCurrency(projectionHeadline?.projected_expense ?? '0.00'),
+      value: formatCurrency(monthlyPlan?.forecast_expense ?? projectionHeadline?.projected_expense ?? '0.00'),
       detail: 'Ainda nao realizadas',
       icon: TrendingDown,
       tone: 'expense'
@@ -171,8 +178,8 @@ export default function DashboardPage() {
           <div className="mt-3 flex justify-between text-caption text-text-secondary">
             <span>{formatCurrency(monthlyPlan?.realized_expense ?? '0.00')}</span>
             <span>
-              {monthlyPlan?.spending_limit
-                ? formatCurrency(monthlyPlan.spending_limit)
+              {monthlyPlan?.monthly_budget_total
+                ? formatCurrency(monthlyPlan.monthly_budget_total)
                 : 'Definir planejamento'}
             </span>
           </div>
@@ -231,7 +238,7 @@ export default function DashboardPage() {
             <div>
               <h2 className="text-heading font-semibold text-text-primary">Saldo projetado</h2>
               <p className="mt-1 text-caption text-text-secondary">
-                Caixa previsto para os proximos 3 meses sem alterar o saldo real.
+                Caixa previsto e capacidade segura de gasto sem alterar o saldo real.
               </p>
             </div>
             <Badge variant="accent">3 meses</Badge>
@@ -246,9 +253,12 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <div className="rounded-control border border-border bg-background/60 px-4 py-4">
-                  <p className="text-caption text-text-secondary">Saldo projetado final</p>
+                  <p className="text-caption text-text-secondary">Quanto ainda posso gastar</p>
                   <p className="mt-2 text-lg font-semibold text-text-primary">
-                    {formatCurrency(projectionHeadline.closing_balance)}
+                    {formatCurrency(monthlyPlan?.safe_to_spend ?? '0.00')}
+                  </p>
+                  <p className="mt-1 text-caption text-text-secondary">
+                    Reserva minima: {formatCurrency(monthlyPlan?.minimum_reserve_amount ?? '0.00')}
                   </p>
                 </div>
               </div>
@@ -357,11 +367,11 @@ export default function DashboardPage() {
             </Badge>
           </div>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
-            <div className="rounded-control border border-border bg-background/60 px-4 py-4">
-              <p className="text-caption text-text-secondary">Meta</p>
-              <p className="mt-2 text-lg font-semibold text-text-primary">
-                {formatCurrency(monthlyPlan?.savings_target ?? '0.00')}
-              </p>
+              <div className="rounded-control border border-border bg-background/60 px-4 py-4">
+                <p className="text-caption text-text-secondary">Meta</p>
+                <p className="mt-2 text-lg font-semibold text-text-primary">
+                  {formatCurrency(monthlyPlan?.savings_target ?? '0.00')}
+                </p>
             </div>
             <div className="rounded-control border border-border bg-background/60 px-4 py-4">
               <p className="text-caption text-text-secondary">Economia atual</p>
@@ -376,11 +386,12 @@ export default function DashboardPage() {
             <div className="rounded-control border border-border bg-background/60 px-4 py-4">
               <p className="text-caption text-text-secondary">Restante</p>
               <p className="mt-2 text-lg font-semibold text-text-primary">
-                {monthlyPlan?.savings_target
-                  ? formatCurrency(
-                      String(Number(monthlyPlan.savings_target) - Number(monthlyPlan.realized_savings))
-                    )
-                  : 'Nao definido'}
+                {formatCurrency(
+                  Math.max(
+                    0,
+                    Number(monthlyPlan?.savings_target ?? 0) - Number(monthlyPlan?.realized_savings ?? 0)
+                  )
+                )}
               </p>
             </div>
           </div>
@@ -418,6 +429,84 @@ export default function DashboardPage() {
             ) : (
               <p className="text-sm text-text-secondary">
                 Sem compromissos previstos para os proximos dias.
+              </p>
+            )}
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="p-5 sm:p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-heading font-semibold text-text-primary">Orcamento em alerta</h2>
+              <p className="mt-1 text-caption text-text-secondary">
+                Categorias mais proximas do limite considerando realizado e previsto.
+              </p>
+            </div>
+            <Badge variant="accent">{topBudgetCategories.length} categorias</Badge>
+          </div>
+          <div className="mt-6 space-y-3">
+            {topBudgetCategories.length ? (
+              topBudgetCategories.map((budget) => (
+                <div
+                  key={budget.budget_id}
+                  className="rounded-control border border-border bg-background/60 px-4 py-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-text-primary">{budget.category_name}</p>
+                      <p className="mt-1 text-caption text-text-secondary">
+                        {formatCurrency(budget.realized_amount)} realizado •{' '}
+                        {formatCurrency(budget.forecast_amount)} previsto
+                      </p>
+                    </div>
+                    <Badge variant={getUsageTone(budget.status)}>
+                      {getUsageLabel(budget.status)}
+                    </Badge>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-text-secondary">
+                Defina orcamentos por categoria para acompanhar alertas aqui.
+              </p>
+            )}
+          </div>
+        </Card>
+
+        <Card className="p-5 sm:p-6" tone="secondary">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-heading font-semibold text-text-primary">Metas em destaque</h2>
+              <p className="mt-1 text-caption text-text-secondary">
+                Progresso da principal meta e da reserva de emergencia.
+              </p>
+            </div>
+            <Badge variant="accent">{activeGoals.length} metas</Badge>
+          </div>
+          <div className="mt-6 space-y-3">
+            {primaryGoal ? (
+              <div className="rounded-control border border-border bg-background/60 px-4 py-4">
+                <p className="font-medium text-text-primary">{primaryGoal.name}</p>
+                <p className="mt-1 text-caption text-text-secondary">
+                  {formatCurrency(primaryGoal.current_amount)} de {formatCurrency(primaryGoal.target_amount)}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-text-secondary">Nenhuma meta ativa no momento.</p>
+            )}
+
+            {emergencyGoal ? (
+              <div className="rounded-control border border-border bg-background/60 px-4 py-4">
+                <p className="font-medium text-text-primary">Reserva de emergencia</p>
+                <p className="mt-1 text-caption text-text-secondary">
+                  {formatCurrency(emergencyGoal.current_amount)} de {formatCurrency(emergencyGoal.target_amount)}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-text-secondary">
+                Crie uma meta de reserva de emergencia para acompanhar cobertura minima.
               </p>
             )}
           </div>

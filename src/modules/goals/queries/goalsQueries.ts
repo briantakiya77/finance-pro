@@ -6,6 +6,7 @@ import type { FinancialGoalFormValues, GoalProgressFormValues } from '@/modules/
 import { financialProjectionQueryKey, upcomingCommitmentsQueryKey } from '@/modules/planning/queries/planningQueries';
 
 export const financialGoalsQueryKey = ['financial-goals'] as const;
+export const financialGoalQueryKey = ['financial-goal'] as const;
 
 export function useFinancialGoalsQuery() {
   return useQuery({
@@ -22,12 +23,33 @@ export function useFinancialGoalsQuery() {
   });
 }
 
+export function useGoalContributionsQuery(goalId: string | null) {
+  return useQuery({
+    queryKey: [...financialGoalQueryKey, goalId, 'contributions'],
+    enabled: Boolean(goalId),
+    queryFn: async () => {
+      if (!goalId) {
+        return [];
+      }
+
+      const result = await goalsService.listGoalContributions(goalId);
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      return result.data ?? [];
+    }
+  });
+}
+
 function useInvalidateGoalData() {
   const queryClient = useQueryClient();
 
   return async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: financialGoalsQueryKey }),
+      queryClient.invalidateQueries({ queryKey: financialGoalQueryKey }),
       queryClient.invalidateQueries({ queryKey: upcomingCommitmentsQueryKey }),
       queryClient.invalidateQueries({ queryKey: financialProjectionQueryKey }),
       queryClient.invalidateQueries({ queryKey: dashboardSummaryQueryKey })
@@ -74,7 +96,7 @@ export function useUpdateGoalProgressMutation() {
 
   return useMutation({
     mutationFn: async (payload: { goalId: string; values: GoalProgressFormValues }) => {
-      const result = await goalsService.updateGoalProgress(payload);
+      const result = await goalsService.createGoalContribution(payload);
 
       if (result.error) {
         throw new Error(result.error);

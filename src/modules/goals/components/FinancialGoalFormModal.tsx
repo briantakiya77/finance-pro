@@ -7,7 +7,7 @@ import type {
   FinancialGoalFormValues,
   FinancialGoalRow
 } from '@/modules/goals/types/goals';
-import { financialGoalTypeOptions } from '@/modules/goals/types/goals';
+import { emergencyTargetMonthOptions, financialGoalTypeOptions } from '@/modules/goals/types/goals';
 import { Button, FieldError, FieldLabel, Input, Modal, Select } from '@/shared/components/ui';
 
 type FinancialGoalFormModalProps = {
@@ -18,13 +18,22 @@ type FinancialGoalFormModalProps = {
 };
 
 function mapGoalToFormValues(goal?: FinancialGoalRow | null): FinancialGoalFormValues {
+  const normalizedType =
+    goal?.type === 'emergency_fund' ||
+    goal?.type === 'purchase' ||
+    goal?.type === 'investment' ||
+    goal?.type === 'general'
+      ? goal.type
+      : 'general';
+
   return {
     currentAmount: goal?.current_amount ?? '0.00',
     name: goal?.name ?? '',
     notes: goal?.notes ?? '',
     targetAmount: goal?.target_amount ?? '',
     targetDate: goal?.target_date ?? '',
-    type: goal?.type ?? 'other'
+    targetMonths: goal?.target_months ? String(goal.target_months) : '',
+    type: normalizedType
   };
 }
 
@@ -37,6 +46,7 @@ export function FinancialGoalFormModal({
   const {
     formState: { errors },
     handleSubmit,
+    watch,
     register,
     reset
   } = useForm<FinancialGoalFormValues>({
@@ -47,6 +57,8 @@ export function FinancialGoalFormModal({
   useEffect(() => {
     reset(mapGoalToFormValues(goal));
   }, [goal, reset]);
+
+  const goalType = watch('type');
 
   return (
     <Modal
@@ -84,6 +96,18 @@ export function FinancialGoalFormModal({
               ))}
             </Select>
             <FieldError>{errors.type?.message}</FieldError>
+          </FieldLabel>
+
+          <FieldLabel className="space-y-2">
+            <span>Horizonte recomendado</span>
+            <Select {...register('targetMonths')} disabled={goalType !== 'emergency_fund'}>
+              {emergencyTargetMonthOptions.map((option) => (
+                <option key={option.value || 'manual'} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+            <FieldError>{errors.targetMonths?.message}</FieldError>
           </FieldLabel>
 
           <FieldLabel className="space-y-2">

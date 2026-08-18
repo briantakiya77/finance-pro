@@ -22,6 +22,7 @@ export type PlanningBudgetFormValue = {
 
 export type PlanningFormValues = {
   expectedIncome: string;
+  minimumReserveAmount: string;
   notes: string;
   savingsTarget: string;
   spendingLimit: string;

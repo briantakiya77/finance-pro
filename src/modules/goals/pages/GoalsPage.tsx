@@ -1,12 +1,14 @@
 import { PencilLine, PiggyBank, Plus, Target, TrendingUp, XCircle } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { useAccountsQuery } from '@/modules/accounts/queries/accountsQueries';
 import { FinancialGoalFormModal } from '@/modules/goals/components/FinancialGoalFormModal';
 import { GoalProgressModal } from '@/modules/goals/components/GoalProgressModal';
 import {
   useCancelFinancialGoalMutation,
   useCreateFinancialGoalMutation,
   useFinancialGoalsQuery,
+  useGoalContributionsQuery,
   useUpdateFinancialGoalMutation,
   useUpdateGoalProgressMutation
 } from '@/modules/goals/queries/goalsQueries';
@@ -42,6 +44,22 @@ function formatGoalDate(value: string | null) {
   return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`));
 }
 
+function getGoalTypeLabel(type: FinancialGoalRow['type']) {
+  if (type === 'emergency_fund') {
+    return 'Reserva';
+  }
+
+  if (type === 'purchase') {
+    return 'Compra';
+  }
+
+  if (type === 'investment') {
+    return 'Investimento';
+  }
+
+  return 'Geral';
+}
+
 export default function GoalsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<FinancialGoalRow | null>(null);
@@ -50,12 +68,17 @@ export default function GoalsPage() {
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
   const goalsQuery = useFinancialGoalsQuery();
+  const accountsQuery = useAccountsQuery();
   const createGoalMutation = useCreateFinancialGoalMutation();
   const updateGoalMutation = useUpdateFinancialGoalMutation();
   const progressGoalMutation = useUpdateGoalProgressMutation();
   const cancelGoalMutation = useCancelFinancialGoalMutation();
+  const contributionsQuery = useGoalContributionsQuery(goalPendingProgress?.id ?? null);
 
   const goals = useMemo(() => goalsQuery.data ?? [], [goalsQuery.data]);
+  const emergencyGoal =
+    goals.find((goal) => goal.type === 'emergency_fund' && goal.status !== 'cancelled') ?? null;
+  const accounts = accountsQuery.data ?? [];
 
   async function handleCreateGoal(values: FinancialGoalFormValues) {
     try {
@@ -119,11 +142,11 @@ export default function GoalsPage() {
     return <RouteLoading />;
   }
 
-  if (goalsQuery.isError) {
+  if (goalsQuery.isError || accountsQuery.isError) {
     return (
       <section className="mx-auto max-w-6xl">
         <Toast variant="danger" title="Nao foi possivel carregar as metas">
-          {getFriendlyErrorMessage(goalsQuery.error)}
+          {getFriendlyErrorMessage(goalsQuery.error ?? accountsQuery.error)}
         </Toast>
       </section>
     );
@@ -149,6 +172,32 @@ export default function GoalsPage() {
           </Toast>
         )}
 
+        {emergencyGoal ? (
+          <Card className="p-5 sm:p-6" tone="secondary">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-caption text-text-secondary">Reserva de emergencia</p>
+                <h2 className="mt-2 text-heading font-semibold text-text-primary">
+                  {formatCurrency(emergencyGoal.current_amount)} / {formatCurrency(emergencyGoal.target_amount)}
+                </h2>
+                <p className="mt-2 text-sm text-text-secondary">
+                  Faltam{' '}
+                  {formatCurrency(
+                    Math.max(
+                      0,
+                      Number(emergencyGoal.target_amount) - Number(emergencyGoal.current_amount)
+                    )
+                  )}
+                  {emergencyGoal.target_months ? ` • horizonte de ${emergencyGoal.target_months} meses` : ''}
+                </p>
+              </div>
+              <Badge variant={emergencyGoal.status === 'completed' ? 'success' : 'accent'}>
+                {getProgressPercentage(emergencyGoal.current_amount, emergencyGoal.target_amount)}%
+              </Badge>
+            </div>
+          </Card>
+        ) : null}
+
         {goals.length === 0 ? (
           <Card className="p-8 text-center sm:p-12">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-control bg-accent-gradient-soft text-accent">
@@ -166,6 +215,10 @@ export default function GoalsPage() {
           <div className="grid gap-4 lg:grid-cols-2">
             {goals.map((goal) => {
               const percentage = getProgressPercentage(goal.current_amount, goal.target_amount);
+              const remainingAmount = Math.max(
+                0,
+                Number(goal.target_amount) - Number(goal.current_amount)
+              );
 
               return (
                 <Card key={goal.id} className="p-5 sm:p-6" interactive>
@@ -176,7 +229,7 @@ export default function GoalsPage() {
                         <h2 className="text-heading font-semibold text-text-primary">{goal.name}</h2>
                       </div>
                       <p className="mt-2 text-caption text-text-secondary">
-                        Prazo: {formatGoalDate(goal.target_date)}
+                        {getGoalTypeLabel(goal.type)} • Prazo: {formatGoalDate(goal.target_date)}
                       </p>
                     </div>
                     <Badge
@@ -211,6 +264,21 @@ export default function GoalsPage() {
                     </div>
                   </div>
 
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-control border border-border bg-background/60 px-4 py-4">
+                      <p className="text-caption text-text-secondary">Falta atingir</p>
+                      <p className="mt-2 text-lg font-semibold text-text-primary">
+                        {formatCurrency(remainingAmount)}
+                      </p>
+                    </div>
+                    <div className="rounded-control border border-border bg-background/60 px-4 py-4">
+                      <p className="text-caption text-text-secondary">Reserva recomendada</p>
+                      <p className="mt-2 text-lg font-semibold text-text-primary">
+                        {goal.target_months ? `${goal.target_months} meses` : 'Manual'}
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="mt-5">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-caption text-text-secondary">Progresso</span>
@@ -236,7 +304,7 @@ export default function GoalsPage() {
                       onClick={() => setGoalPendingProgress(goal)}
                       disabled={goal.status !== 'active'}
                     >
-                      Adicionar progresso
+                      Adicionar aporte
                     </Button>
                     <Button
                       type="button"
@@ -283,12 +351,39 @@ export default function GoalsPage() {
 
       {goalPendingProgress && (
         <GoalProgressModal
+          accounts={accounts}
           goalName={goalPendingProgress.name}
           isSubmitting={progressGoalMutation.isPending}
           onClose={() => setGoalPendingProgress(null)}
           onSubmit={handleUpdateProgress}
         />
       )}
+
+      {goalPendingProgress && contributionsQuery.data?.length ? (
+        <Card className="fixed inset-x-4 top-24 z-40 mx-auto max-h-72 max-w-lg overflow-auto p-5 shadow-elevated xl:right-8 xl:left-auto xl:mx-0 xl:w-[28rem]">
+          <p className="text-heading font-semibold text-text-primary">Aportes recentes</p>
+          <div className="mt-4 space-y-3">
+            {contributionsQuery.data.slice(0, 4).map((contribution) => (
+              <div
+                key={contribution.id}
+                className="rounded-control border border-border bg-background/60 px-4 py-3"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-text-primary">
+                    {formatCurrency(contribution.amount)}
+                  </span>
+                  <span className="text-caption text-text-secondary">
+                    {formatGoalDate(contribution.contribution_date)}
+                  </span>
+                </div>
+                {contribution.description ? (
+                  <p className="mt-2 text-caption text-text-secondary">{contribution.description}</p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
 
       {goalPendingCancel && (
         <Card className="fixed inset-x-4 bottom-24 z-50 mx-auto max-w-lg p-5 shadow-elevated xl:bottom-8">

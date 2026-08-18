@@ -30,6 +30,7 @@ function mapPlanningToFormValues(
 
   return {
     expectedIncome: monthlyPlan?.expected_income ?? '',
+    minimumReserveAmount: monthlyPlan?.minimum_reserve_amount ?? '0.00',
     notes: monthlyPlan?.notes ?? '',
     savingsTarget: monthlyPlan?.savings_target ?? '0.00',
     spendingLimit: monthlyPlan?.spending_limit ?? '',
@@ -89,6 +90,12 @@ export function PlanningFormModal({
             <span>Limite de gastos</span>
             <Input {...register('spendingLimit')} inputMode="decimal" placeholder="0,00" />
             <FieldError>{errors.spendingLimit?.message}</FieldError>
+          </FieldLabel>
+
+          <FieldLabel className="space-y-2">
+            <span>Reserva minima protegida</span>
+            <Input {...register('minimumReserveAmount')} inputMode="decimal" placeholder="0,00" />
+            <FieldError>{errors.minimumReserveAmount?.message}</FieldError>
           </FieldLabel>
 
           <FieldLabel className="space-y-2 md:col-span-2">
