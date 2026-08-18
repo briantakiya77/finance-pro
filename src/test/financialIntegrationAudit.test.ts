@@ -26,6 +26,10 @@ const installmentsRecurringMigration = readFileSync(
   resolve(process.cwd(), 'supabase/migrations/20260809113000_create_installments_and_recurring_core.sql'),
   'utf-8'
 );
+const transfersMigration = readFileSync(
+  resolve(process.cwd(), 'supabase/migrations/20260818110000_create_transfers_core.sql'),
+  'utf-8'
+);
 const dashboardService = readFileSync(
   resolve(process.cwd(), 'src/modules/dashboard/services/dashboardService.ts'),
   'utf-8'
@@ -60,6 +64,7 @@ describe('financial integration audit', () => {
     expect(installmentsRecurringMigration).toContain(
       'create table public.recurring_transaction_occurrences'
     );
+    expect(transfersMigration).toContain('create table public.transfers');
   });
 
   it('confirma como o saldo bancario eh atualizado', () => {
@@ -72,6 +77,8 @@ describe('financial integration audit', () => {
     expect(transactionsHardeningMigration).toContain(
       'set current_balance = current_balance - v_signed_amount'
     );
+    expect(transfersMigration).toContain('set current_balance = current_balance - p_amount');
+    expect(transfersMigration).toContain('set current_balance = current_balance + p_amount');
     expect(creditCardsMigration).toContain('set current_balance = current_balance - p_amount');
     expect(creditCardPurchaseSection).not.toMatch(
       /create_credit_card_purchase[\s\S]*current_balance = current_balance/i
@@ -143,6 +150,9 @@ describe('financial integration audit', () => {
     expect(installmentsRecurringMigration).toContain(
       'create policy "authenticated users can select own recurring transaction occurrences"'
     );
+    expect(transfersMigration).toContain(
+      'create policy "authenticated users can select own active transfers"'
+    );
   });
 
   it('preserva idempotencia nas operacoes financeiras integradas', () => {
@@ -154,6 +164,7 @@ describe('financial integration audit', () => {
     expect(installmentsRecurringMigration).toContain(
       'create unique index recurring_transaction_occurrences_period_unique'
     );
+    expect(transfersMigration).toContain('create unique index transfers_user_client_mutation_unique');
     expect(installmentsRecurringMigration).toContain(
       "public.uuid_from_text(p_recurring_transaction_id::text || ':' || p_reference_period::text)"
     );

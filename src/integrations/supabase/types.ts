@@ -895,6 +895,70 @@ export type Database = {
           }
         ];
       };
+      transfers: {
+        Row: {
+          id: string;
+          user_id: string;
+          from_account_id: string;
+          to_account_id: string;
+          amount: string;
+          description: string | null;
+          transfer_date: string;
+          client_mutation_id: string;
+          deleted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          from_account_id: string;
+          to_account_id: string;
+          amount: string;
+          description?: string | null;
+          transfer_date: string;
+          client_mutation_id: string;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          from_account_id?: string;
+          to_account_id?: string;
+          amount?: string;
+          description?: string | null;
+          transfer_date?: string;
+          client_mutation_id?: string;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'transfers_from_account_id_fkey';
+            columns: ['from_account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'transfers_to_account_id_fkey';
+            columns: ['to_account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'transfers_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -978,6 +1042,17 @@ export type Database = {
           p_client_mutation_id: string;
         };
         Returns: Database['public']['Tables']['transactions']['Row'];
+      };
+      create_transfer: {
+        Args: {
+          p_from_account_id: string;
+          p_to_account_id: string;
+          p_amount: string;
+          p_description: string | null;
+          p_transfer_date: string;
+          p_client_mutation_id: string;
+        };
+        Returns: Database['public']['Tables']['transfers']['Row'];
       };
       ensure_default_categories: {
         Args: Record<PropertyKey, never>;
@@ -1064,6 +1139,12 @@ export type Database = {
           p_invoice_id: string;
         };
         Returns: Database['public']['Enums']['credit_card_invoice_status'];
+      };
+      soft_delete_transfer: {
+        Args: {
+          p_transfer_id: string;
+        };
+        Returns: Database['public']['Tables']['transfers']['Row'];
       };
       soft_delete_credit_card_purchase: {
         Args: {
@@ -1156,6 +1237,17 @@ export type Database = {
           p_notes: string | null;
         };
         Returns: Database['public']['Tables']['transactions']['Row'];
+      };
+      update_transfer: {
+        Args: {
+          p_transfer_id: string;
+          p_from_account_id: string;
+          p_to_account_id: string;
+          p_amount: string;
+          p_description: string | null;
+          p_transfer_date: string;
+        };
+        Returns: Database['public']['Tables']['transfers']['Row'];
       };
       upsert_category_budget: {
         Args: {
